@@ -1,10 +1,10 @@
 public with sharing class PlantTriggerHelper {
     public void processBeforeInsert(List<CAMPX__Plant__c> plants) {
-       Set<Id> gardenIds = getGardenIdSet(plants);
-       Map<Id, CAMPX__Garden__c> gardenMap = new Map<Id, CAMPX__Garden__c>([SELECT Id, CAMPX__Sun_Exposure__c FROM CAMPX__Garden__c WHERE Id IN :gardenIds]);
-       
-       for (CAMPX__Plant__c plant : plants) {
-        initializeFields(plant, gardenMap);
+        Set<Id> gardenIds = createGardenIdSet(plants);
+        Map<Id, CAMPX__Garden__c> gardenMap = new Map<Id, CAMPX__Garden__c>([SELECT Id, CAMPX__Sun_Exposure__c FROM CAMPX__Garden__c WHERE Id IN :gardenIds]);
+        
+        for (CAMPX__Plant__c plant : plants) {
+            initializeFields(plant, gardenMap);
         }
     }
 
@@ -14,7 +14,7 @@ public with sharing class PlantTriggerHelper {
         plant.CAMPX__Sunlight__c = (plant.CAMPX__Garden__c != null && gardenMap.containsKey(plant.CAMPX__Garden__c)) ? gardenMap.get(plant.CAMPX__Garden__c).CAMPX__Sun_Exposure__c : 'Partial Sun';
     }
 
-    private Set<Id> getGardenIdSet(List<CAMPX__Plant__c> plants) {
+    private Set<Id> createGardenIdSet(List<CAMPX__Plant__c> plants) {
         Set<Id> gardenIds = new Set<Id>();
         for (CAMPX__Plant__c plant : plants) {
             if (plant.CAMPX__Garden__c != null) {
