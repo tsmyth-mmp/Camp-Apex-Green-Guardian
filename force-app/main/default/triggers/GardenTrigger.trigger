@@ -5,5 +5,11 @@ trigger GardenTrigger on CAMPX__Garden__c (before insert, before update, before 
         when BEFORE_INSERT {
             handler.beforeInsert(Trigger.new);
         }
+        when BEFORE_UPDATE {
+            handler.beforeUpdate(Trigger.old, Trigger.new, Trigger.oldMap, Trigger.newMap);
+        }
+        when AFTER_INSERT {
+            handler.afterInsert(Trigger.new, Trigger.newMap);
+        }
     }
 }
