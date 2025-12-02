@@ -67,4 +67,65 @@ private class GardenTriggerHandlerTest {
         Assert.areEqual(insertedGarden.CAMPX__Manager__c, tasks[0].OwnerId);
         Assert.areEqual('Acquire Plants', tasks[0].Subject);
     }
+
+
+    @isTest
+    static void transferManagerOfTaskOnUpdateTest() {
+        User u1 = [SELECT Id FROM User WHERE Id = :UserInfo.getUserId() LIMIT 1];
+        User u2;
+        
+        System.runAs(u1) {
+            Profile p = [
+                SELECT Id
+                FROM Profile
+                WHERE Name = 'Standard User'
+                LIMIT 1
+            ];
+
+            u2 = new User(
+                Alias = 'tuser',
+                Email = 'testuser+' + System.currentTimeMillis() + '@example.com',
+                EmailEncodingKey = 'UTF-8',
+                LastName = 'Test',
+                LanguageLocaleKey = 'en_US',
+                LocaleSidKey = 'en_US',
+                ProfileId = p.Id,
+                TimeZoneSidKey = 'America/Los_Angeles',
+                Username = 'testuser+' + System.currentTimeMillis() + '@example.com',
+                UserRoleId = [SELECT Id FROM UserRole LIMIT 1].Id
+            );
+            insert u2;
+        }
+
+        CAMPX__Garden__c garden = new CAMPX__Garden__c(
+            CAMPX__Manager__c = u1.Id
+        );
+        insert garden;
+
+        garden.CAMPX__Manager__c = u2.Id;
+
+        Test.startTest();
+        update garden;
+        Test.stopTest();
+
+        CAMPX__Garden__c insertedGarden = [
+            SELECT Id, CAMPX__Manager__c
+            FROM CAMPX__Garden__c
+            WHERE Id = :garden.Id
+            LIMIT 1
+        ];
+
+        List<Task> tasks = [
+            SELECT Id, WhatId, Subject, OwnerId, Status
+            FROM Task
+            WHERE WhatId = :insertedGarden.Id
+        ];
+
+        System.assertEquals(1, tasks.size());
+        System.assertEquals(insertedGarden.Id, tasks[0].WhatId);
+        System.assertEquals(insertedGarden.CAMPX__Manager__c, tasks[0].OwnerId);
+        System.assertEquals('Acquire Plants', tasks[0].Subject);
+        System.assertNotEquals('Completed', tasks[0].Status);
+    }
+
 }
