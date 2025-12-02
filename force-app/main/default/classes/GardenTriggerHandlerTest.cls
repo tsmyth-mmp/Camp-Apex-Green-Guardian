@@ -2,7 +2,7 @@
 private class GardenTriggerHandlerTest {
 
     @isTest
-    static void initalizeTest_NoUserInput() {
+    static void initalizeTest_Default() {
         CAMPX__Garden__c garden = new CAMPX__Garden__c();
         Test.startTest();
         insert(garden);
