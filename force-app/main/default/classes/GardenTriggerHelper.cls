@@ -5,6 +5,10 @@ public with sharing class GardenTriggerHelper {
         }
     }
 
+    public void processBeforeUpdate(List<CAMPX__Garden__c> oldRecords, List<CAMPX__Garden__c> newRecords, Map<Id, CAMPX__Garden__c> oldMap, Map<Id, CAMPX__Garden__c> newMap) {
+        
+    }
+
     public void processAfterInsert(List<CAMPX__Garden__c> gardens, Map<Id, CAMPX__Garden__c> newGardenMap) {
         List<Task> newTasks = new List<Task>();
         for (CAMPX__Garden__c garden : gardens) {
