@@ -7,15 +7,22 @@ public with sharing class GardenTriggerHelper {
 
     public void processBeforeUpdate(List<CAMPX__Garden__c> oldRecords, List<CAMPX__Garden__c> newRecords, Map<Id, CAMPX__Garden__c> oldMap, Map<Id, CAMPX__Garden__c> newMap) {
         List<Task> newTasks = new List<Task>();
+        Set<Task> oldTasksSet = new Set<Task>();
         for (CAMPX__Garden__c garden : (List<CAMPX__Garden__c>) newRecords) {
             CAMPX__Garden__c oldGarden = oldMap.get(garden.Id);
+            
             if (oldGarden.CAMPX__Manager__c == null && garden.CAMPX__Manager__c != null) {
                 newTasks.add(createNewTask(garden));
+            }
+
+            if (oldGarden.CAMPX__Manager__c != null && garden.CAMPX__Manager__c != oldGarden.CAMPX__Manager__c) {
+                oldTasksSet = createOldTaskIdSet(garden);
+                newTasks.addAll(updateTask(garden, oldTasksSet));
             }
         }
         
         if (!newTasks.isEmpty()){
-            insert(newTasks);
+            upsert(newTasks);
         }
     }
 
@@ -46,5 +53,26 @@ public with sharing class GardenTriggerHelper {
             OwnerId = garden.CAMPX__Manager__c,
             Subject = 'Acquire Plants');
         return newTask;
+    }
+
+    private Set<Task> updateTask(CAMPX__Garden__c garden, Set<Task> tasksToUpdate) {
+        for (Task task : tasksToUpdate) {
+            task.OwnerId = garden.CAMPX__Manager__c;
+        }
+        return tasksToUpdate;
+    }
+
+    private Set<Task> createOldTaskIdSet(CAMPX__Garden__c garden) {
+        Set<Task> oldTasksSet = new Set<Task>();
+        for (Task task : [SELECT Id, WhatId, OwnerId, Subject, Status
+                                      FROM Task 
+                                      WHERE WhatId = :garden.id])
+        {
+            if (task.Subject == 'Acquire Plants' && task.Status != 'Completed') {
+                oldTasksSet.add(task);
+            }
+        }
+
+        return oldTasksSet;
     }
 }
