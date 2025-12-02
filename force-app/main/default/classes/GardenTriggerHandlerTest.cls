@@ -37,11 +37,28 @@ private class GardenTriggerHandlerTest {
     }
 
     @isTest
-    static void createTaskTest(){
+    static void createTaskOnInsertTest(){
         User u = [SELECT Id FROM User WHERE Id = :UserInfo.getUserId() LIMIT 1];
-        CAMPX__Garden__c garden = new CAMPX__Garden__c(CAMPX__Manager__c =u.Id);
+        CAMPX__Garden__c garden = new CAMPX__Garden__c(CAMPX__Manager__c = u.Id);
         Test.startTest();
         insert garden;
+        Test.stopTest();
+        CAMPX__Garden__c insertedGarden = [SELECT Id, CAMPX__Manager__c FROM CAMPX__Garden__c WHERE Id = :garden.Id LIMIT 1];
+        List<Task> tasks = [SELECT Id, WhatId, Subject, OwnerId FROM Task WHERE WhatId = :insertedGarden.Id];
+        Assert.areEqual(1, tasks.size());
+        Assert.areEqual(insertedGarden.id, tasks[0].WhatId);
+        Assert.areEqual(insertedGarden.CAMPX__Manager__c, tasks[0].OwnerId);
+        Assert.areEqual('Acquire Plants', tasks[0].Subject);
+    }
+
+    @isTest
+    static void createTaskOnUpdateTest(){
+        User u = [SELECT Id FROM User WHERE Id = :UserInfo.getUserId() LIMIT 1];
+        CAMPX__Garden__c garden = new CAMPX__Garden__c(CAMPX__Manager__c = null);
+        insert garden;
+        garden.CAMPX__Manager__c = u.Id;
+        Test.startTest();
+        update garden;
         Test.stopTest();
         CAMPX__Garden__c insertedGarden = [SELECT Id, CAMPX__Manager__c FROM CAMPX__Garden__c WHERE Id = :garden.Id LIMIT 1];
         List<Task> tasks = [SELECT Id, WhatId, Subject, OwnerId FROM Task WHERE WhatId = :insertedGarden.Id];
