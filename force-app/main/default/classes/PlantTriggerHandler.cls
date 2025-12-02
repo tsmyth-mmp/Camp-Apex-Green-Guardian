@@ -1,4 +1,4 @@
-public with sharing class PlantTriggerHandler {
+public with sharing class PlantTriggerHandler implements ITriggerHandler {
     private PlantTriggerHelper helper;
     
     public PlantTriggerHandler() {
@@ -8,5 +8,9 @@ public with sharing class PlantTriggerHandler {
     public void beforeInsert(List<SObject> newRecords) {
         List<CAMPX__Plant__c> plants = (List<CAMPX__Plant__c>) newRecords;
         helper.processBeforeInsert(plants);
+    }
+
+    public void afterInsert(List<SObject> newRecords, Map<Id, SObject> newRecordMap) {
+
     }
 }
