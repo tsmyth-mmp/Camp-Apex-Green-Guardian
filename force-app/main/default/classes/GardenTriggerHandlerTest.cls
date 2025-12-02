@@ -27,12 +27,12 @@ private class GardenTriggerHandlerTest {
       Test.startTest();
       insert(garden);
       Test.stopTest();
-      CAMPX__Garden__c expected = [SELECT Id, CAMPX__Status__c, CAMPX__Max_Plant_Count__c, CAMPX__Minimum_Plant_Count__c, CAMPX__Total_Plant_Count__c, CAMPX__Total_Unhealthy_Plant_Count__c 
+      CAMPX__Garden__c actual = [SELECT Id, CAMPX__Status__c, CAMPX__Max_Plant_Count__c, CAMPX__Minimum_Plant_Count__c, CAMPX__Total_Plant_Count__c, CAMPX__Total_Unhealthy_Plant_Count__c 
                                    FROM CAMPX__Garden__c WHERE Id = :garden.Id LIMIT 1];                         
-      Assert.areEqual('Operational', expected.CAMPX__Status__c);
-      Assert.areEqual(1000, expected.CAMPX__Max_Plant_Count__c);
-      Assert.areEqual(5, expected.CAMPX__Minimum_Plant_Count__c);
-      Assert.areEqual(10, expected.CAMPX__Total_Plant_Count__c);
-      Assert.areEqual(0, expected.CAMPX__Total_Unhealthy_Plant_Count__c);
+      Assert.areEqual('Operational', actual.CAMPX__Status__c);
+      Assert.areEqual(1000, actual.CAMPX__Max_Plant_Count__c);
+      Assert.areEqual(5, actual.CAMPX__Minimum_Plant_Count__c);
+      Assert.areEqual(10, actual.CAMPX__Total_Plant_Count__c);
+      Assert.areEqual(0, actual.CAMPX__Total_Unhealthy_Plant_Count__c);
     }
 }
