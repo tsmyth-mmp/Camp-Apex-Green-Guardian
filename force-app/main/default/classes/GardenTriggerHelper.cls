@@ -13,6 +13,7 @@ public with sharing class GardenTriggerHelper {
                 newTasks.add(createNewTask(garden));
             }
         }
+        
         if (!newTasks.isEmpty()){
             insert(newTasks);
         }
