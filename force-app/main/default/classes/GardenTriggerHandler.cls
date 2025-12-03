@@ -30,5 +30,13 @@ public with sharing class GardenTriggerHandler implements ITriggerHandler {
         helper.processAfterInsert(gardens, newGardenMap);
     }
 
+    public void afterUpdate(List<SObject> oldRecords, List<SObject> newRecords, Map<Id, SObject> oldMap, Map<Id, SObject> newMap) {
+        List<CAMPX__Garden__c> oldGardens = (List<CAMPX__Garden__c>) oldRecords;
+        List<CAMPX__Garden__c> newGardens = (List<CAMPX__Garden__c>) newRecords;
+        Map<Id, CAMPX__Garden__c> oldGardensMap = (Map<Id, CAMPX__Garden__c>) oldMap;
+        Map<Id, CAMPX__Garden__c> newGardensMap = (Map<Id, CAMPX__Garden__c>) newMap;
+        helper.processAfterUpdate(oldGardens, newGardens, oldGardensMap, newGardensMap);
+    }
+
 
 }

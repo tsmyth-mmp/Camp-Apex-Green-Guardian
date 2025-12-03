@@ -14,5 +14,8 @@ trigger GardenTrigger on CAMPX__Garden__c (before insert, before update, before 
         when AFTER_INSERT {
             handler.afterInsert(Trigger.new, Trigger.newMap);
         }
+        when AFTER_UPDATE {
+            handler.afterUpdate(Trigger.old, Trigger.new, Trigger.oldMap, Trigger.newMap);
+        }
     }
 }

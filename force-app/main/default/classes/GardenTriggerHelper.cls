@@ -10,6 +10,7 @@ public with sharing class GardenTriggerHelper {
     }
 
     public void processBeforeDelete(List<CAMPX__Garden__c> oldRecords, Map<Id, CAMPX__Garden__c> oldMap) {
+
     }
 
 
@@ -24,6 +25,10 @@ public with sharing class GardenTriggerHelper {
         if (!newTasks.isEmpty()){
             insert(newTasks);
         }
+    }
+
+    public void processAfterUpdate(List<CAMPX__Garden__c> oldRecords, List<CAMPX__Garden__c> newRecords, Map<Id, CAMPX__Garden__c> oldMap, Map<Id, CAMPX__Garden__c> newMap) {
+        
     }
 
      /**
@@ -146,5 +151,9 @@ public with sharing class GardenTriggerHelper {
         if (!tasksToInsert.isEmpty()) {
             insert tasksToInsert;
         }
+    }
+
+    private void deleteTask(List<CAMPX__Garden__c> newRecords, Map<Id, CAMPX__Garden__c> oldMap) {
+        
     }
 }
