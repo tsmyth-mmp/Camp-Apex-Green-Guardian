@@ -23,6 +23,11 @@ public with sharing class GardenTriggerHelper {
         }
     }
 
+     /**
+     * Initializes default field values on a garden record if null or blank.
+     *
+     * @param garden CAMPX__Garden__c record to initialize.
+     */
     private void initializeFields(CAMPX__Garden__c garden) {
         garden.CAMPX__Status__c = garden.CAMPX__Status__c != null ? garden.CAMPX__Status__c : 'Awaiting Resources';
         garden.CAMPX__Max_Plant_Count__c = garden.CAMPX__Max_Plant_Count__c != null ? garden.CAMPX__Max_Plant_Count__c : 100;
@@ -31,6 +36,12 @@ public with sharing class GardenTriggerHelper {
         garden.CAMPX__Total_Unhealthy_Plant_Count__c = garden.CAMPX__Total_Unhealthy_Plant_Count__c != null ? garden.CAMPX__Total_Unhealthy_Plant_Count__c : 0;
     }
 
+    /**
+     * Creates a new Task for a given garden.
+     *
+     * @param garden CAMPX__Garden__c record for which to create a task.
+     * @return Task object populated with WhatId, OwnerId, and Subject.
+     */
     private Task createNewTask(CAMPX__Garden__c garden) {
         Task newTask = new Task( 
             WhatId = garden.Id,
@@ -39,6 +50,13 @@ public with sharing class GardenTriggerHelper {
         return newTask;
     }
 
+    /**
+     * Returns a set of garden Ids where the manager has changed.
+     *
+     * @param newRecords List of updated CAMPX__Garden__c records.
+     * @param oldMap Map of original garden records keyed by Id.
+     * @return Set<Id> of garden records with manager changes.
+     */
     private Set<Id> getGardenIdsWithManagerChange(List<CAMPX__Garden__c> newRecords, Map<Id, CAMPX__Garden__c> oldMap) {
         Set<Id> gardenIdsForManagerChange = new Set<Id>();
         for (CAMPX__Garden__c garden : newRecords) {
@@ -50,6 +68,12 @@ public with sharing class GardenTriggerHelper {
         return gardenIdsForManagerChange;
     }
 
+    /**
+     * Returns a map of existing 'Acquire Plants' tasks keyed by garden Id.
+     *
+     * @param gardenIdsForManagerChange Set of garden Ids to query tasks for.
+     * @return Map<Id, List<Task>> of tasks grouped by WhatId (garden Id).
+     */
     private Map<Id, List<Task>> getTasksByGardenId(Set<Id> gardenIdsForManagerChange) {
         Map<Id, List<Task>> tasksByGardenId = new Map<Id, List<Task>>();
         if (!gardenIdsForManagerChange.isEmpty()) {
@@ -67,6 +91,14 @@ public with sharing class GardenTriggerHelper {
         return tasksByGardenId;
     }
     
+    /**
+     * Handles changes to garden managers:
+     *  - Inserts new tasks for gardens with newly assigned managers.
+     *  - Updates OwnerId on existing tasks if the manager changed, skipping completed tasks.
+     *
+     * @param newRecords List of updated CAMPX__Garden__c records.
+     * @param oldMap Map of original garden records keyed by Id.
+     */
     private void handleManagerChange(List<CAMPX__Garden__c> newRecords, Map<Id, CAMPX__Garden__c> oldMap) {
         List<Task> tasksToInsert = new List<Task>();
         List<Task> tasksToUpdate = new List<Task>();
