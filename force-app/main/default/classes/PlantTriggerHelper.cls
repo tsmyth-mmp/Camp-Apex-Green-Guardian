@@ -3,7 +3,12 @@ public with sharing class PlantTriggerHelper {
         initializePlants(newRecords);   
     }
 
-    public void processBeforeUpdate(List<CAMPX__Plant__c> oldRecords, List<CAMPX__Plant__c> newRecords, Map<Id, CAMPX__Plant__c> oldMap, Map<Id, CAMPX__Plant__c> newMap) {
+    public void processBeforeUpdate(
+        List<CAMPX__Plant__c> oldRecords, 
+        List<CAMPX__Plant__c> newRecords, 
+        Map<Id, CAMPX__Plant__c> oldMap, 
+        Map<Id, CAMPX__Plant__c> newMap 
+    ) {
         
     }
 
@@ -11,7 +16,13 @@ public with sharing class PlantTriggerHelper {
         updateGardenTotalPlantCount(null, newRecords);
     }
 
-    public void processAfterUpdate(List<CAMPX__Plant__c> oldRecords, List<CAMPX__Plant__c> newRecords, Map<Id, CAMPX__Plant__c> oldMap, Map<Id, CAMPX__Plant__c> newMap) {
+    public void processAfterUpdate(
+        List<CAMPX__Plant__c> oldRecords,
+        List<CAMPX__Plant__c> newRecords,
+        Map<Id, CAMPX__Plant__c> oldMap,
+        Map<Id, CAMPX__Plant__c> newMap
+         
+    ) {
         updateGardenTotalPlantCount(oldRecords, newRecords);
     }
 
