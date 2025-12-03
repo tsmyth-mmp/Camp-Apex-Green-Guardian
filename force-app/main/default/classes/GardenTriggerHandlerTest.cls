@@ -67,4 +67,82 @@ private class GardenTriggerHandlerTest {
         Assert.areEqual(insertedGarden.CAMPX__Manager__c, tasks[0].OwnerId);
         Assert.areEqual('Acquire Plants', tasks[0].Subject);
     }
+
+
+    @isTest
+    static void transferManagerOfTaskOnUpdateTest() {
+        User u1 = [SELECT Id FROM User WHERE Id = :UserInfo.getUserId()];
+        User u2;
+
+        System.runAs(u1) {
+            Profile standardProfile = [
+                SELECT Id
+                FROM Profile
+                WHERE Name = 'Standard User'
+                LIMIT 1
+            ];
+
+            UserRole anyRole = [
+                SELECT Id
+                FROM UserRole
+                LIMIT 1
+            ];
+
+            u2 = new User(
+                Alias = 'tuser',
+                Email = 'testuser+' + System.currentTimeMillis() + '@example.com',
+                EmailEncodingKey = 'UTF-8',
+                LastName = 'Test',
+                LanguageLocaleKey = 'en_US',
+                LocaleSidKey = 'en_US',
+                ProfileId = standardProfile.Id,
+                TimeZoneSidKey = 'America/Los_Angeles',
+                Username = 'testuser+' + System.currentTimeMillis() + '@example.com',
+                UserRoleId = anyRole.Id
+            );
+            insert u2;
+        }
+
+       List<CAMPX__Garden__c> gardensToInsert = new List<CAMPX__Garden__c>{
+        new CAMPX__Garden__c(CAMPX__Manager__c = u1.Id),
+        new CAMPX__Garden__c(CAMPX__Manager__c = u1.Id)
+        };
+
+        insert gardensToInsert;
+
+        CAMPX__Garden__c g1 = gardensToInsert[0];
+        CAMPX__Garden__c g2 = gardensToInsert[1];
+
+       Task g1Task = [
+        SELECT Id, Status
+        FROM Task
+        WHERE WhatId = :g1.Id
+        LIMIT 1
+        ];
+
+        g1Task.Status = 'Completed';
+        update g1Task;
+
+        g1.CAMPX__Manager__c = u2.Id;
+        g2.CAMPX__Manager__c = u2.Id;
+
+        Test.startTest();
+        update new List<CAMPX__Garden__c>{ g1, g2 };
+        Test.stopTest();
+
+        List<Task> openTasks = [
+        SELECT Id, WhatId, OwnerId, Subject, Status
+        FROM Task
+        WHERE WhatId IN :new Set<Id>{ g1.Id, g2.Id }
+          AND Status != 'Completed'
+        ];
+
+        System.assertEquals(1, openTasks.size(),'Only one open task should exist after manager reassignment');
+        Task t = openTasks[0];
+        System.assertEquals(g2.Id, t.WhatId, 'Open task should belong to Garden 2');
+        System.assertEquals(u2.Id, t.OwnerId, 'Task owner should now be the new manager');
+        System.assertEquals('Acquire Plants', t.Subject, 'Task subject should not change');
+        System.assertNotEquals('Completed', t.Status, 'Returned task must be open');
+    }
+
 }
