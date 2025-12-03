@@ -46,33 +46,31 @@ public with sharing class PlantTriggerHelper {
         }
     }
 
-    private void updateGardenTotalPlantCount(List<CAMPX__Plant__c> oldPlants, List<CAMPX__Plant__c> newPlants) {
-        Set<Id> affectedGardenIds = new Set<Id>();
+    private Set<Id> getAffectedGardenIds(List<CAMPX__Plant__c> oldPlants, List<CAMPX__Plant__c> newPlants) {
+        Set<Id> gardenIds = new Set<Id>();
 
-        if (oldPlants != null) {
+        if (oldPlants != null && newPlants != null) {
             for (Integer i = 0; i < oldPlants.size(); i++) {
-                Id oldGardenId = oldPlants[i].CAMPX__Garden__c;
-                Id newGardenId = (newPlants != null && i < newPLants.size()) ? newPlants[i].CAMPX__Garden__c : null;
+                Id oldId = oldPlants[i].CAMPX__Garden__c;
+                Id newId = newPlants[i].CAMPX__Garden__c;
 
-                if (oldGardenId != null) {
-                    if (oldGardenId != newGardenId) {
-                        affectedGardenIds.add(oldGardenId);
-                    } else if (newGardenId == null) {
-                        affectedGardenIds.add(oldGardenId);
-                    }
-                }
-
-                if (newGardenId != null && oldGardenId != newGardenId) {
-                    affectedGardenIds.add(newGardenId);
+                if (oldId != newId) {
+                    if (oldId != null) gardenIds.add(oldId);
+                    if (newId != null) gardenIds.add(newId);
                 } 
             }
+        } else if (oldPlants != null) {
+            gardenIds.addAll(createGardenIdSet(oldPlants));
+
         } else if (newPlants != null) {
-            for (CAMPX__Plant__c plant : newPlants) {
-                if (plant.CAMPX__Garden__c != null) {
-                    affectedGardenIds.add(plant.CAMPX__Garden__c);
-                }
-            }
+            gardenIds.addAll(createGardenIdSet(newPlants));
         }
+
+        return gardenIds;
+    }
+
+    private void updateGardenTotalPlantCount(List<CAMPX__Plant__c> oldPlants, List<CAMPX__Plant__c> newPlants) {
+       Set<Id> affectedGardenIds = getAffectedGardenIds(oldPlants, newPlants);
 
         if (affectedGardenIds.isEmpty()) return;
 
