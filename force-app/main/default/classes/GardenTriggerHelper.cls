@@ -89,11 +89,6 @@ public with sharing class GardenTriggerHelper {
                         }
                     }   
                  }
-
-                // If there were no existing tasks, create a new one
-                if (!hasAnyTask) {
-                    tasksToInsert.add(createNewTask(garden));
-                }
             }
         }
 
