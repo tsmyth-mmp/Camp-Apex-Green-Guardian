@@ -32,7 +32,7 @@ public with sharing class GardenTriggerHelper {
     }
 
     public void processAfterUpdate(List<CAMPX__Garden__c> oldRecords, List<CAMPX__Garden__c> newRecords, Map<Id, CAMPX__Garden__c> oldMap, Map<Id, CAMPX__Garden__c> newMap) {
-        deleteTask(oldRecords, newRecords, oldMap, newMap);
+        deleteOpenTasksWithoutReplacementManager(oldRecords, newRecords, oldMap, newMap);
     }
 
      /**
@@ -41,7 +41,7 @@ public with sharing class GardenTriggerHelper {
      * @param garden CAMPX__Garden__c record to initialize.
      */
     private void initializeFields(CAMPX__Garden__c garden) {
-        garden.CAMPX__Status__c = garden.CAMPX__Status__c ?? 'Awaiting Resources';
+        garden.CAMPX__Status__c = garden.CAMPX__Status__c ?? STATUS_AWAITING_RESOURCES;
         garden.CAMPX__Max_Plant_Count__c = garden.CAMPX__Max_Plant_Count__c ?? 100;
         garden.CAMPX__Minimum_Plant_Count__c = garden.CAMPX__Minimum_Plant_Count__c ?? 1;
         garden.CAMPX__Total_Plant_Count__c = garden.CAMPX__Total_Plant_Count__c ?? 0;
@@ -58,7 +58,7 @@ public with sharing class GardenTriggerHelper {
         Task newTask = new Task( 
             WhatId = garden.Id,
             OwnerId = garden.CAMPX__Manager__c,
-            Subject = 'Acquire Plants');
+            Subject = ACQUIRE_PLANTS_SUBJECT);
         return newTask;
     }
 
@@ -81,26 +81,37 @@ public with sharing class GardenTriggerHelper {
     }
 
     /**
-     * Returns a map of existing 'Acquire Plants' tasks keyed by garden Id.
+     * Queries tasks by subject for the given gardens with optional status exclusions.
      *
-     * @param gardenIdsForManagerChange Set of garden Ids to query tasks for.
-     * @return Map<Id, List<Task>> of tasks grouped by WhatId (garden Id).
+     * @param gardenIds Set of CAMPX__Garden__c Ids to query tasks for.
+     * @param subject Task subject to filter by (e.g., 'Acquire Plants').
+     * @param excludedStatuses Optional set of Status values to exclude; can be null.
+     * @return List<Task> matching the criteria.
      */
-    private Map<Id, List<Task>> getTasksByGardenId(Set<Id> gardenIdsForManagerChange) {
-        Map<Id, List<Task>> tasksByGardenId = new Map<Id, List<Task>>();
-        if (!gardenIdsForManagerChange.isEmpty()) {
-            for (Task t : [SELECT Id, WhatId, OwnerId, Subject, Status 
-                           FROM Task
-                           WHERE WhatId IN :gardenIdsForManagerChange 
-                            AND Subject = 'Acquire Plants']
-                ) {
-                if (!tasksByGardenId.containsKey(t.WhatId)) {
-                    tasksByGardenId.put(t.WhatId, new List<Task>());
-                }
-                tasksByGardenId.get(t.WhatId).add(t);
-            }
+    private List<Task> queryTasks(Set<Id> gardenIds, String subject, Set<String> excludedStatuses) {
+        if (gardenIds.isEmpty()) {
+            return new List<Task>();
         }
-        return tasksByGardenId;
+
+        List<Task> tasks;
+        if (excludedStatuses == null || excludedStatuses.isEmpty()) {
+            tasks = [
+                    SELECT Id, WhatId, OwnerId, Subject, Status 
+                    FROM Task 
+                    WHERE WhatId IN :gardenIds 
+                        AND Subject = :subject 
+                    ];
+        } else {
+            tasks = [
+                    SELECT Id, WhatId, OwnerId, Subject, Status 
+                    FROM Task 
+                    WHERE WhatId IN :gardenIds 
+                        AND Subject = :subject 
+                        AND Status NOT IN :excludedStatuses
+                    ];
+        }
+        
+        return tasks;
     }
     
     /**
@@ -119,7 +130,14 @@ public with sharing class GardenTriggerHelper {
         Set<Id> gardenIdsForManagerChange = getGardenIdsWithManagerChange(newRecords, oldMap);
 
         // Query existing 'Acquire Plants' tasks for all relevant gardens
-        Map<Id, List<Task>> tasksByGardenId = getTasksByGardenId(gardenIdsForManagerChange);
+        List<Task> tasks = queryTasks(gardenIdsForManagerChange, ACQUIRE_PLANTS_SUBJECT, null);
+        Map<Id, List<Task>> tasksByGardenId = new Map<Id, List<Task>>();
+        for (Task t : tasks) {
+            if (!tasksByGardenId.containsKey(t.WhatId)) {
+                tasksByGardenId.put(t.WhatId, new List<Task>());
+            }    
+            tasksByGardenId.get(t.WhatId).add(t);
+        }
 
         // Process updates per garden
         for (CAMPX__Garden__c garden : newRecords) {
@@ -138,7 +156,7 @@ public with sharing class GardenTriggerHelper {
 
                 if (hasAnyTask) {
                     for (Task t : tasksByGardenId.get(garden.Id)) {
-                        if (t.Status != 'Completed') { // skip completed tasks
+                        if (t.Status != STATUS_COMPLETED) { // skip completed tasks
                             t.OwnerId = garden.CAMPX__Manager__c;
                             tasksToUpdate.add(t);
                         }
@@ -157,8 +175,20 @@ public with sharing class GardenTriggerHelper {
         }
     }
 
-    private void deleteTask(List<CAMPX__Garden__c> oldRecords, List<CAMPX__Garden__c> newRecords, Map<Id, CAMPX__Garden__c> oldMap, Map<Id, CAMPX__Garden__c> newMap) {
-        List<Task> tasksToDelete = new List<Task>();
+    /**
+     * Deletes all open "Acquire Plants" tasks for gardens whose manager has been removed
+     * without a replacement. Completed tasks are preserved.
+     *
+     * This method should be called in an after-update context, after garden records
+     * have had their manager removed. It ensures the system does not retain
+     * open tasks for gardens with no assigned manager.
+     *
+     * @param oldRecords List of original CAMPX__Garden__c records before update.
+     * @param newRecords List of updated CAMPX__Garden__c records after update.
+     * @param oldMap Map of original garden records keyed by Id.
+     * @param newMap Map of updated garden records keyed by Id.
+     */
+    private void deleteOpenTasksWithoutReplacementManager(List<CAMPX__Garden__c> oldRecords, List<CAMPX__Garden__c> newRecords, Map<Id, CAMPX__Garden__c> oldMap, Map<Id, CAMPX__Garden__c> newMap) {
         Set<Id> gardenIdsWithManagerRemoved = new Set<Id>();
         
         for (CAMPX__Garden__c garden : newRecords) {
@@ -168,31 +198,10 @@ public with sharing class GardenTriggerHelper {
                 gardenIdsWithManagerRemoved.add(garden.Id);
             }
         }
-
-        Map<Id, List<Task>> tasksByGardenId = new Map<Id, List<Task>>();
-        if (!gardenIdsWithManagerRemoved.isEmpty()) {
-            for (Task t : [SELECT Id, WhatId, OwnerId, Subject, Status 
-                           FROM Task
-                           WHERE WhatId IN :gardenIdsWithManagerRemoved 
-                            AND Subject = 'Acquire Plants'
-                            AND Status != 'Completed']
-                ) {
-                if (!tasksByGardenId.containsKey(t.WhatId)) {
-                    tasksByGardenId.put(t.WhatId, new List<Task>());
-                }
-                tasksByGardenId.get(t.WhatId).add(t);
-            }
-        }
-
-        for (CAMPX__Garden__c garden : newRecords) {
-            if (tasksByGardenId.containsKey(garden.Id)) {
-                 for (Task t : tasksByGardenId.get(garden.Id)) {
-                    t.OwnerId = garden.CAMPX__Manager__c;
-                    tasksToDelete.add(t);
-                }   
-            }
-        }
-
+        
+        Set<String> excludedStatuses = new Set<String>{STATUS_COMPLETED};
+        List<Task> tasksToDelete = queryTasks(gardenIdsWithManagerRemoved, ACQUIRE_PLANTS_SUBJECT, excludedStatuses);
+        
         if (!tasksToDelete.isEmpty()) {
             delete tasksToDelete;
         }
