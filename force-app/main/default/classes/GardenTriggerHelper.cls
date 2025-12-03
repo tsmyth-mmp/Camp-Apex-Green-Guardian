@@ -1,4 +1,8 @@
 public with sharing class GardenTriggerHelper {
+    private static final String ACQUIRE_PLANTS_SUBJECT = 'Acquire Plants';
+    private static final String STATUS_AWAITING_RESOURCES = 'Awaiting Resources';
+    private static final String STATUS_COMPLETED = 'Completed';
+    
     public void processBeforeInsert(List<CAMPX__Garden__c> gardens) {
         for (CAMPX__Garden__c garden : gardens) {
             initializeFields(garden);
