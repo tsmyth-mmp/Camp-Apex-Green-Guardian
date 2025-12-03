@@ -18,7 +18,7 @@ trigger PlantTrigger on CAMPX__Plant__c (before insert, before update, before de
             // handler.afterUpdate(Trigger.old, Trigger.new, Trigger.oldMap, Trigger.newMap);
         }
         when AFTER_DELETE {
-            // handler.afterDelete(Trigger.old, Trigger.oldMap);
+            handler.afterDelete(Trigger.old, Trigger.oldMap);
         }
         when AFTER_UNDELETE {
             // handler.afterUndelete(Trigger.new, Trigger.newMap);

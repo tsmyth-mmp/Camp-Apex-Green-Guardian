@@ -20,6 +20,10 @@ public with sharing class PlantTriggerHelper {
         
     }
 
+    public void processAfterDelete(List<CAMPX__Plant__c> oldPlants, Map<Id, CAMPX__Plant__c> oldMap) {
+        updateGardenTotalPlantCount(oldPlants);
+    }
+
     private void initializeFields(CAMPX__Plant__c plant, Map<Id, CAMPX__Garden__c> gardenMap) {
         plant.CAMPX__Soil_Type__c = String.isNotBlank(plant.CAMPX__Soil_Type__c) ? plant.CAMPX__Soil_Type__c : 'All Purpose Potting Soil';
         plant.CAMPX__Water__c = plant.CAMPX__Water__c != null ? plant.CAMPX__Water__c : 'Once Weekly';
