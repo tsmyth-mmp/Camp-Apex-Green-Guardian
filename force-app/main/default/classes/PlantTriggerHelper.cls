@@ -35,4 +35,31 @@ public with sharing class PlantTriggerHelper {
         }
         return gardenIds;
     }
+
+    private void updateGardenTotalPlantCount(List<CAMPX__Plant__c> plants) {
+        Set<Id> gardenIds = createGardenIdSet(plants);
+
+        if (gardenIds.isEmpty()) return;
+
+
+        Map<Id, Integer> gardensTotalPlantCountMap = new Map<Id, Integer>(); 
+        for (AggregateResult ar : [SELECT CAMPX__Garden__c gardenId, Count(Id) total
+                                   FROM CAMPX__Plant__c 
+                                   WHERE CAMPX__Garden__c IN :gardenIds 
+                                   GROUP BY CAMPX__Garden__c]
+            ) 
+        {
+            gardensTotalPlantCountMap.put((Id)ar.get('gardenId'), (Integer)ar.get('total'));
+        }
+
+        List<CAMPX__Garden__c> gardensToUpdate = new List<CAMPX__Garden__c>();
+        for (Id gardenId : gardenIds) {
+            Integer total = gardensTotalPlantCountMap.containsKey(gardenId) ? gardensTotalPlantCountMap.get(gardenId) : 0;
+            gardensToUpdate.add(new CAMPX__Garden__c(Id = gardenId,CAMPX__Total_Plant_Count__c = total));
+        }
+
+        if (!gardensToUpdate.isEmpty()) {
+            update gardensToUpdate;
+        }
+    }
 }
