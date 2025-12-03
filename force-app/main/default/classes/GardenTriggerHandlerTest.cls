@@ -71,6 +71,7 @@ private class GardenTriggerHandlerTest {
 
     @isTest
     static void transferManagerOfTaskOnUpdateTest() {
+        List<CAMPX__Garden__c> gardens = new List<CAMPX__Garden__c>();
         User u1 = [SELECT Id FROM User WHERE Id = :UserInfo.getUserId() LIMIT 1];
         User u2;
         
@@ -97,33 +98,46 @@ private class GardenTriggerHandlerTest {
             insert u2;
         }
 
-        CAMPX__Garden__c garden = new CAMPX__Garden__c(
+        CAMPX__Garden__c garden1 = new CAMPX__Garden__c(
             CAMPX__Manager__c = u1.Id
         );
-        insert garden;
+        CAMPX__Garden__c garden2 = new CAMPX__Garden__c(
+            CAMPX__Manager__c = u1.Id
+        );
 
-        garden.CAMPX__Manager__c = u2.Id;
+        gardens.add(garden1);
+        gardens.add(garden2);
+        insert gardens;
+        gardens.clear();
+
+        Task completedTask = [SELECT Id, WhatId, Subject, OwnerId, Status FROM Task WHERE WhatId = :garden1.Id LIMIT 1];
+        completedTask.Status = 'Completed';
+        update completedTask;
+
+        garden1.CAMPX__Manager__c = u2.Id;
+        garden2.CAMPX__Manager__c = u2.Id;
+        gardens.add(garden1);
+        gardens.add(garden2);
 
         Test.startTest();
-        update garden;
+        update gardens;
         Test.stopTest();
 
-        CAMPX__Garden__c insertedGarden = [
+        List<CAMPX__Garden__c> insertedGardens = [
             SELECT Id, CAMPX__Manager__c
             FROM CAMPX__Garden__c
-            WHERE Id = :garden.Id
-            LIMIT 1
+            WHERE Id in :gardens
         ];
 
         List<Task> tasks = [
             SELECT Id, WhatId, Subject, OwnerId, Status
             FROM Task
-            WHERE WhatId = :insertedGarden.Id
+            WHERE WhatId in :insertedGardens AND Status != 'Completed'
         ];
 
         System.assertEquals(1, tasks.size());
-        System.assertEquals(insertedGarden.Id, tasks[0].WhatId);
-        System.assertEquals(insertedGarden.CAMPX__Manager__c, tasks[0].OwnerId);
+        System.assertEquals(insertedGardens[1].id, tasks[0].WhatId);
+        System.assertEquals(insertedGardens[1].CAMPX__Manager__c, tasks[0].OwnerId);
         System.assertEquals('Acquire Plants', tasks[0].Subject);
         System.assertNotEquals('Completed', tasks[0].Status);
     }
