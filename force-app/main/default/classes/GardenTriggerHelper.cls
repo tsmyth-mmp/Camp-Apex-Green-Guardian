@@ -9,6 +9,9 @@ public with sharing class GardenTriggerHelper {
         handleManagerChange(newRecords, oldMap);
     }
 
+    public void processBeforeDelete(List<CAMPX__Garden__c> oldRecords, Map<Id, CAMPX__Garden__c> oldMap) {
+    }
+
 
     public void processAfterInsert(List<CAMPX__Garden__c> gardens, Map<Id, CAMPX__Garden__c> newGardenMap) {
         List<Task> newTasks = new List<Task>();

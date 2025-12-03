@@ -8,6 +8,9 @@ trigger GardenTrigger on CAMPX__Garden__c (before insert, before update, before 
         when BEFORE_UPDATE {
             handler.beforeUpdate(Trigger.old, Trigger.new, Trigger.oldMap, Trigger.newMap);
         }
+        when BEFORE_DELETE {
+            handler.beforeDelete(Trigger.old, Trigger.oldMap);
+        }
         when AFTER_INSERT {
             handler.afterInsert(Trigger.new, Trigger.newMap);
         }
