@@ -26,4 +26,43 @@ private class PlantTriggerHandlerTest {
         Assert.areEqual('Daily', actual.CAMPX__Water__c);
         Assert.areEqual('Full Sun', actual.CAMPX__Sunlight__c);
     }
+
+    @isTest
+    static void aggregateTotalPlantCount_Insert() {
+        CAMPX__Garden__c garden = new CAMPX__Garden__c();
+        insert(garden);
+        List<CAMPX__Plant__c> plants = new List<CAMPX__Plant__c> { 
+            new CAMPX__Plant__c(CAMPX__Garden__c = garden.Id),
+            new CAMPX__Plant__c(CAMPX__Garden__c = garden.Id) 
+        };
+
+        CAMPX__Plant__c plant1 = plants[0];
+        CAMPX__Plant__c plant2 = plants[1];
+        insert plants;
+
+        CAMPX__Plant__c plant3 = new CAMPX__Plant__c(CAMPX__Garden__c = garden.Id);
+        Test.startTest();
+        insert plant3;
+        Test.stopTest();
+        Assert.areEqual(3, [SELECT CAMPX__Total_Plant_Count__c FROM CAMPX__Garden__c WHERE Id = :garden.Id].CAMPX__Total_Plant_Count__c);
+    }
+
+     @isTest
+    static void aggregateTotalPlantCount_Delete() {
+        CAMPX__Garden__c garden = new CAMPX__Garden__c();
+        insert(garden);
+        List<CAMPX__Plant__c> plants = new List<CAMPX__Plant__c> { 
+            new CAMPX__Plant__c(CAMPX__Garden__c = garden.Id),
+            new CAMPX__Plant__c(CAMPX__Garden__c = garden.Id) 
+        };
+
+        CAMPX__Plant__c plant1 = plants[0];
+        CAMPX__Plant__c plant2 = plants[1];
+        insert plants;
+
+        Test.startTest();
+        delete plant2;
+        Test.stopTest();
+        Assert.areEqual(1, [SELECT CAMPX__Total_Plant_Count__c FROM CAMPX__Garden__c WHERE Id = :garden.Id].CAMPX__Total_Plant_Count__c);
+    }
 }
