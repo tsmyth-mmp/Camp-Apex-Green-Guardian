@@ -28,7 +28,7 @@ public with sharing class GardenTriggerHelper {
     }
 
     public void processAfterUpdate(List<CAMPX__Garden__c> oldRecords, List<CAMPX__Garden__c> newRecords, Map<Id, CAMPX__Garden__c> oldMap, Map<Id, CAMPX__Garden__c> newMap) {
-        
+        deleteTask(oldRecords, newRecords, oldMap, newMap);
     }
 
      /**
@@ -153,7 +153,44 @@ public with sharing class GardenTriggerHelper {
         }
     }
 
-    private void deleteTask(List<CAMPX__Garden__c> newRecords, Map<Id, CAMPX__Garden__c> oldMap) {
+    private void deleteTask(List<CAMPX__Garden__c> oldRecords, List<CAMPX__Garden__c> newRecords, Map<Id, CAMPX__Garden__c> oldMap, Map<Id, CAMPX__Garden__c> newMap) {
+        List<Task> tasksToDelete = new List<Task>();
+        Set<Id> gardenIdsWithManagerRemoved = new Set<Id>();
         
+        for (CAMPX__Garden__c garden : newRecords) {
+            CAMPX__Garden__c oldGarden = oldMap.get(garden.Id);
+            CAMPX__Garden__c newGarden = newMap.get(garden.Id);
+            if (oldGarden.CAMPX__Manager__c != null && newGarden.CAMPX__Manager__c == null) {
+                gardenIdsWithManagerRemoved.add(garden.Id);
+            }
+        }
+
+        Map<Id, List<Task>> tasksByGardenId = new Map<Id, List<Task>>();
+        if (!gardenIdsWithManagerRemoved.isEmpty()) {
+            for (Task t : [SELECT Id, WhatId, OwnerId, Subject, Status 
+                           FROM Task
+                           WHERE WhatId IN :gardenIdsWithManagerRemoved 
+                            AND Subject = 'Acquire Plants'
+                            AND Status != 'Completed']
+                ) {
+                if (!tasksByGardenId.containsKey(t.WhatId)) {
+                    tasksByGardenId.put(t.WhatId, new List<Task>());
+                }
+                tasksByGardenId.get(t.WhatId).add(t);
+            }
+        }
+
+        for (CAMPX__Garden__c garden : newRecords) {
+            if (tasksByGardenId.containsKey(garden.Id)) {
+                 for (Task t : tasksByGardenId.get(garden.Id)) {
+                    t.OwnerId = garden.CAMPX__Manager__c;
+                    tasksToDelete.add(t);
+                }   
+            }
+        }
+
+        if (!tasksToDelete.isEmpty()) {
+            delete tasksToDelete;
+        }
     }
 }
