@@ -145,4 +145,56 @@ private class GardenTriggerHandlerTest {
         System.assertNotEquals('Completed', t.Status, 'Returned task must be open');
     }
 
+    @isTest
+    static void deleteTasksWithoutReplacementManager() {
+        User u1 = [SELECT Id FROM User WHERE Id = :UserInfo.getUserId()];
+
+        List<CAMPX__Garden__c> gardensToInsert = new List<CAMPX__Garden__c>{
+            new CAMPX__Garden__c(CAMPX__Manager__c = u1.Id),
+            new CAMPX__Garden__c(CAMPX__Manager__c = u1.Id)
+        };
+
+        insert gardensToInsert;
+
+        CAMPX__Garden__c g1 = gardensToInsert[0];
+        CAMPX__Garden__c g2 = gardensToInsert[1];
+
+        Task g1Task = [
+            SELECT Id, Status
+            FROM Task
+            WHERE WhatId = :g1.Id
+            LIMIT 1
+            ];
+
+        Task g2Task = [
+            SELECT Id, Status
+            FROM Task
+            WHERE WhatId = :g2.Id
+            LIMIT 1
+            ];
+
+        g1Task.Status = 'Completed';
+        update g1Task;
+        g1.CAMPX__Manager__c = null;
+        g2.CAMPX__Manager__c = null;
+        Test.startTest();
+        update new List<CAMPX__Garden__c>{ g1, g2 };
+        Test.stopTest();
+
+        List<Task> remainingTasks = [
+        SELECT Id, WhatId, OwnerId, Subject, Status
+        FROM Task
+        WHERE WhatId IN :new Set<Id>{ g1.Id, g2.Id }
+        ];
+        System.assertEquals(1, remainingTasks.size(),'Only one completed task should exist after manager removal');
+        Task t = remainingTasks[0];
+        System.assertEquals('Completed', t.Status, 'Returned task must be completed');
+        System.assertEquals('Acquire Plants', t.Subject, 'Task subject should not change');
+        System.assertEquals(g1.Id, t.WhatId, 'Completed task should belong to Garden 1');
+        g1 = [SELECT CAMPX__Manager__c FROM CAMPX__Garden__c WHERE Id = :g1.Id];
+        g2 = [SELECT CAMPX__Manager__c FROM CAMPX__Garden__c WHERE Id = :g2.Id];
+        System.assertEquals(null, g1.CAMPX__Manager__c, 'Garden 1 manager should now be removed');
+        System.assertEquals(null, g2.CAMPX__Manager__c, 'Garden 2 manager should now be removed');
+    }
+
 }

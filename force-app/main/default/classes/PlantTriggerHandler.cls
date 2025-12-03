@@ -10,7 +10,6 @@ public with sharing class PlantTriggerHandler implements ITriggerHandler {
         helper.processBeforeInsert(plants);
     }
 
-       // before update
     public void beforeUpdate(List<SObject> oldRecords, List<SObject> newRecords, Map<Id, SObject> oldRecordMap, Map<Id, SObject> newRecordMap) {
         List<CAMPX__Plant__c> oldPlants = (List<CAMPX__Plant__c>) oldRecords;
         List<CAMPX__Plant__c> newPlants = (List<CAMPX__Plant__c>) newRecords;
@@ -19,7 +18,23 @@ public with sharing class PlantTriggerHandler implements ITriggerHandler {
         // helper.processBeforeUpdate(oldPlants, newPlants);
     }
 
-    public void afterInsert(List<SObject> newRecords, Map<Id, SObject> newRecordMap) {
+    public void beforeDelete(List<SObject> oldRecords, Map<Id, SObject> oldRecordMap) {
+        List<CAMPX__Plant__c> oldPlants = (List<CAMPX__Plant__c>) oldRecords;
+        Map<Id, CAMPX__Plant__c> oldMap = (Map<Id, CAMPX__Plant__c>) oldRecordMap;
+        // helper.processBeforeDelete(oldPlants, oldMap);
+    }
 
+    public void afterInsert(List<SObject> newRecords, Map<Id, SObject> newRecordMap) {
+        List<CAMPX__Plant__c> plants = (List<CAMPX__Plant__c>) newRecords;
+        Map<Id, CAMPX__Plant__c> newPlantsMap = (Map<Id, CAMPX__Plant__c>) newRecordMap;
+        // helper.processAfterInsert(plants, newPlantsMap);
+    }
+    
+    public void afterUpdate(List<SObject> oldRecords, List<SObject> newRecords, Map<Id, SObject> oldRecordMap, Map<Id, SObject> newRecordMap) {
+        List<CAMPX__Plant__c> oldPlants = (List<CAMPX__Plant__c>) oldRecords;
+        List<CAMPX__Plant__c> newPlants = (List<CAMPX__Plant__c>) newRecords;
+        Map<Id, CAMPX__Plant__c> oldMap = (Map<Id, CAMPX__Plant__c>) oldRecordMap;
+        Map<Id, CAMPX__Plant__c> newMap = (Map<Id, CAMPX__Plant__c>) newRecordMap;
+        // helper.processAfterUpdate(oldPlants, newPlants, oldMap, newMap);
     }
 }
