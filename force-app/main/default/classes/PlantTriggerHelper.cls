@@ -8,6 +8,18 @@ public with sharing class PlantTriggerHelper {
         }
     }
 
+    public void processBeforeUpdate(List<CAMPX__Plant__c> oldRecords, List<CAMPX__Plant__c> newRecords, Map<Id, CAMPX__Plant__c> oldMap, Map<Id, CAMPX__Plant__c> newMap) {
+        
+    }
+
+    public void processAfterInsert(List<CAMPX__Plant__c> plants, Map<Id, CAMPX__Plant__c> newMap) {
+        updateGardenTotalPlantCount(plants);
+    }
+
+    public void processAfterUpdate(List<CAMPX__Plant__c> oldRecords, List<CAMPX__Plant__c> newRecords, Map<Id, CAMPX__Plant__c> oldMap, Map<Id, CAMPX__Plant__c> newMap) {
+        
+    }
+
     private void initializeFields(CAMPX__Plant__c plant, Map<Id, CAMPX__Garden__c> gardenMap) {
         plant.CAMPX__Soil_Type__c = String.isNotBlank(plant.CAMPX__Soil_Type__c) ? plant.CAMPX__Soil_Type__c : 'All Purpose Potting Soil';
         plant.CAMPX__Water__c = plant.CAMPX__Water__c != null ? plant.CAMPX__Water__c : 'Once Weekly';

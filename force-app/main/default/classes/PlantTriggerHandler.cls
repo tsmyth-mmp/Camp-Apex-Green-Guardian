@@ -27,7 +27,7 @@ public with sharing class PlantTriggerHandler implements ITriggerHandler {
     public void afterInsert(List<SObject> newRecords, Map<Id, SObject> newRecordMap) {
         List<CAMPX__Plant__c> plants = (List<CAMPX__Plant__c>) newRecords;
         Map<Id, CAMPX__Plant__c> newPlantsMap = (Map<Id, CAMPX__Plant__c>) newRecordMap;
-        // helper.processAfterInsert(plants, newPlantsMap);
+        helper.processAfterInsert(plants, newPlantsMap);
     }
     
     public void afterUpdate(List<SObject> oldRecords, List<SObject> newRecords, Map<Id, SObject> oldRecordMap, Map<Id, SObject> newRecordMap) {
