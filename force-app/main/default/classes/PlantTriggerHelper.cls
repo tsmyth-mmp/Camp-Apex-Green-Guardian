@@ -1,9 +1,9 @@
 public with sharing class PlantTriggerHelper {
-    public void processBeforeInsert(List<CAMPX__Plant__c> plants) {
-        Set<Id> gardenIds = createGardenIdSet(plants);
+    public void processBeforeInsert(List<CAMPX__Plant__c> newRecords) {
+        Set<Id> gardenIds = createGardenIdSet(null, newRecords);
         Map<Id, CAMPX__Garden__c> gardenMap = new Map<Id, CAMPX__Garden__c>([SELECT Id, CAMPX__Sun_Exposure__c FROM CAMPX__Garden__c WHERE Id IN :gardenIds]);
         
-        for (CAMPX__Plant__c plant : plants) {
+        for (CAMPX__Plant__c plant : newRecords) {
             initializeFields(plant, gardenMap);
         }
     }
@@ -12,16 +12,16 @@ public with sharing class PlantTriggerHelper {
         
     }
 
-    public void processAfterInsert(List<CAMPX__Plant__c> plants, Map<Id, CAMPX__Plant__c> newMap) {
-        updateGardenTotalPlantCount(plants);
+    public void processAfterInsert(List<CAMPX__Plant__c> newRecords, Map<Id, CAMPX__Plant__c> newMap) {
+        updateGardenTotalPlantCount(null, newRecords);
     }
 
     public void processAfterUpdate(List<CAMPX__Plant__c> oldRecords, List<CAMPX__Plant__c> newRecords, Map<Id, CAMPX__Plant__c> oldMap, Map<Id, CAMPX__Plant__c> newMap) {
-        
+        updateGardenTotalPlantCount(oldRecords, newRecords);
     }
 
-    public void processAfterDelete(List<CAMPX__Plant__c> oldPlants, Map<Id, CAMPX__Plant__c> oldMap) {
-        updateGardenTotalPlantCount(oldPlants);
+    public void processAfterDelete(List<CAMPX__Plant__c> oldRecords, Map<Id, CAMPX__Plant__c> oldMap) {
+        updateGardenTotalPlantCount(oldRecords, null);
     }
 
     private void initializeFields(CAMPX__Plant__c plant, Map<Id, CAMPX__Garden__c> gardenMap) {
@@ -30,18 +30,28 @@ public with sharing class PlantTriggerHelper {
         plant.CAMPX__Sunlight__c = (plant.CAMPX__Garden__c != null && gardenMap.containsKey(plant.CAMPX__Garden__c)) ? gardenMap.get(plant.CAMPX__Garden__c).CAMPX__Sun_Exposure__c : 'Partial Sun';
     }
 
-    private Set<Id> createGardenIdSet(List<CAMPX__Plant__c> plants) {
+    private Set<Id> createGardenIdSet(List<CAMPX__Plant__c> oldPlants, List<CAMPX__Plant__c> newPlants) {
         Set<Id> gardenIds = new Set<Id>();
-        for (CAMPX__Plant__c plant : plants) {
-            if (plant.CAMPX__Garden__c != null) {
-                gardenIds.add(plant.CAMPX__Garden__c);
+        if (newPlants != null) {
+            for (CAMPX__Plant__c plant : newPlants) {
+                if (plant.CAMPX__Garden__c != null) {
+                    gardenIds.add(plant.CAMPX__Garden__c);
+                }
+            }
+        }
+
+        if (oldPlants != null) {
+            for (CAMPX__Plant__c plant : oldPlants) {
+                if (plant.CAMPX__Garden__c != null) {
+                    gardenIds.add(plant.CAMPX__Garden__c);
+                }
             }
         }
         return gardenIds;
     }
 
-    private void updateGardenTotalPlantCount(List<CAMPX__Plant__c> plants) {
-        Set<Id> gardenIds = createGardenIdSet(plants);
+    private void updateGardenTotalPlantCount(List<CAMPX__Plant__c> oldPlants, List<CAMPX__Plant__c> newPlants) {
+        Set<Id> gardenIds = createGardenIdSet(oldPlants, newPlants);
 
         if (gardenIds.isEmpty()) return;
 
