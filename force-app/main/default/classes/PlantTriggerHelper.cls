@@ -39,23 +39,42 @@ public with sharing class PlantTriggerHelper {
 
     private void initializePlants(List<CAMPX__Plant__c> plants) {
         Set<Id> gardenIds = createGardenIdSet(plants);
-
         if (gardenIds.isEmpty()) return;
-
         Map<Id, CAMPX__Garden__c> gardenMap = new Map<Id, CAMPX__Garden__c>([SELECT Id, CAMPX__Sun_Exposure__c FROM CAMPX__Garden__c WHERE Id IN :gardenIds]);
-
         for (CAMPX__Plant__c plant : plants) {
             initializeFields(plant, gardenMap);
         }
-        
     }
 
     private void updateGardenTotalPlantCount(List<CAMPX__Plant__c> oldPlants, List<CAMPX__Plant__c> newPlants) {
-        Set<Id> affectedGardenIds = createGardenIdSet(oldPlants);
-        affectedGardenIds.addAll(createGardenIdSet(newPlants));
+        Set<Id> affectedGardenIds = new Set<Id>();
+
+        if (oldPlants != null) {
+            for (Integer i = 0; i < oldPlants.size(); i++) {
+                Id oldGardenId = oldPlants[i].CAMPX__Garden__c;
+                Id newGardenId = (newPlants != null && i < newPLants.size()) ? newPlants[i].CAMPX__Garden__c : null;
+
+                if (oldGardenId != null) {
+                    if (oldGardenId != newGardenId) {
+                        affectedGardenIds.add(oldGardenId);
+                    } else if (newGardenId == null) {
+                        affectedGardenIds.add(oldGardenId);
+                    }
+                }
+
+                if (newGardenId != null && oldGardenId != newGardenId) {
+                    affectedGardenIds.add(newGardenId);
+                } 
+            }
+        } else if (newPlants != null) {
+            for (CAMPX__Plant__c plant : newPlants) {
+                if (plant.CAMPX__Garden__c != null) {
+                    affectedGardenIds.add(plant.CAMPX__Garden__c);
+                }
+            }
+        }
 
         if (affectedGardenIds.isEmpty()) return;
-
 
         Map<Id, Integer> gardensTotalPlantCountMap = new Map<Id, Integer>(); 
         for (AggregateResult ar : [SELECT CAMPX__Garden__c gardenId, Count(Id) total
