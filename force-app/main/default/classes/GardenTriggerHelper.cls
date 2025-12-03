@@ -46,6 +46,7 @@ public with sharing class GardenTriggerHelper {
         garden.CAMPX__Minimum_Plant_Count__c = garden.CAMPX__Minimum_Plant_Count__c ?? 1;
         garden.CAMPX__Total_Plant_Count__c = garden.CAMPX__Total_Plant_Count__c ?? 0;
         garden.CAMPX__Total_Unhealthy_Plant_Count__c = garden.CAMPX__Total_Unhealthy_Plant_Count__c ?? 0;
+        if (garden.CAMPX__Manager__c != null) garden.CAMPX__Manager_Start_Date__c = Date.today();
     }
 
     /**
@@ -69,7 +70,7 @@ public with sharing class GardenTriggerHelper {
      * @param oldMap Map of original garden records keyed by Id.
      * @return Set<Id> of garden records with manager changes.
      */
-    private Set<Id> getGardenIdsWithManagerChange(List<CAMPX__Garden__c> newRecords, Map<Id, CAMPX__Garden__c> oldMap) {
+    private Set<Id> getGardenIdsWithNewOrChangedManager(List<CAMPX__Garden__c> newRecords, Map<Id, CAMPX__Garden__c> oldMap) {
         Set<Id> gardenIdsForManagerChange = new Set<Id>();
         for (CAMPX__Garden__c garden : newRecords) {
             CAMPX__Garden__c oldGarden = oldMap.get(garden.Id);
@@ -127,10 +128,11 @@ public with sharing class GardenTriggerHelper {
         List<Task> tasksToUpdate = new List<Task>();
         
         // Collect garden IDs where manager changed 
-        Set<Id> gardenIdsForManagerChange = getGardenIdsWithManagerChange(newRecords, oldMap);
+        Set<Id> gardenIdsForManagerChange = getGardenIdsWithNewOrChangedManager(newRecords, oldMap);
 
         // Query existing 'Acquire Plants' tasks for all relevant gardens
         List<Task> tasks = queryTasks(gardenIdsForManagerChange, ACQUIRE_PLANTS_SUBJECT, null);
+
         Map<Id, List<Task>> tasksByGardenId = new Map<Id, List<Task>>();
         for (Task t : tasks) {
             if (!tasksByGardenId.containsKey(t.WhatId)) {
@@ -144,16 +146,17 @@ public with sharing class GardenTriggerHelper {
             CAMPX__Garden__c oldGarden = oldMap.get(garden.Id);
             Boolean managerChanged = garden.CAMPX__Manager__c != oldGarden.CAMPX__Manager__c;
             Boolean managerAssigned = oldGarden.CAMPX__Manager__c == null && garden.CAMPX__Manager__c != null;
-
+            
+            
             // Case 1: Manager assigned for the first time
             if (managerAssigned) {
                 tasksToInsert.add(createNewTask(garden));
             }
-
-           // Case 2: Manager changed
+            
+            // Case 2: Manager changed
             if (managerChanged) {
                 Boolean hasAnyTask = tasksByGardenId.containsKey(garden.id);
-
+                
                 if (hasAnyTask) {
                     for (Task t : tasksByGardenId.get(garden.Id)) {
                         if (t.Status != STATUS_COMPLETED) { // skip completed tasks
@@ -161,10 +164,15 @@ public with sharing class GardenTriggerHelper {
                             tasksToUpdate.add(t);
                         }
                     }   
-                 }
+                }
+            }
+
+            // Set manager start date
+            if (managerChanged && garden.CAMPX__Manager__c != null) {
+                garden.CAMPX__Manager_Start_Date__c = Date.today();
             }
         }
-
+        
         // Bulk DML
         if (!tasksToUpdate.isEmpty()) {
              update tasksToUpdate;
@@ -195,6 +203,7 @@ public with sharing class GardenTriggerHelper {
             CAMPX__Garden__c oldGarden = oldMap.get(garden.Id);
             CAMPX__Garden__c newGarden = newMap.get(garden.Id);
             if (oldGarden.CAMPX__Manager__c != null && newGarden.CAMPX__Manager__c == null) {
+                garden.CAMPX__Manager_Start_Date__c = null; // set manager start date to null once manager is removed
                 gardenIdsWithManagerRemoved.add(garden.Id);
             }
         }
