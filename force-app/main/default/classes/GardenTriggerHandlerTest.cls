@@ -71,15 +71,20 @@ private class GardenTriggerHandlerTest {
 
     @isTest
     static void transferManagerOfTaskOnUpdateTest() {
-        List<CAMPX__Garden__c> gardens = new List<CAMPX__Garden__c>();
-        User u1 = [SELECT Id FROM User WHERE Id = :UserInfo.getUserId() LIMIT 1];
+        User u1 = [SELECT Id FROM User WHERE Id = :UserInfo.getUserId()];
         User u2;
-        
+
         System.runAs(u1) {
-            Profile p = [
+            Profile standardProfile = [
                 SELECT Id
                 FROM Profile
                 WHERE Name = 'Standard User'
+                LIMIT 1
+            ];
+
+            UserRole anyRole = [
+                SELECT Id
+                FROM UserRole
                 LIMIT 1
             ];
 
@@ -90,56 +95,54 @@ private class GardenTriggerHandlerTest {
                 LastName = 'Test',
                 LanguageLocaleKey = 'en_US',
                 LocaleSidKey = 'en_US',
-                ProfileId = p.Id,
+                ProfileId = standardProfile.Id,
                 TimeZoneSidKey = 'America/Los_Angeles',
                 Username = 'testuser+' + System.currentTimeMillis() + '@example.com',
-                UserRoleId = [SELECT Id FROM UserRole LIMIT 1].Id
+                UserRoleId = anyRole.Id
             );
             insert u2;
         }
 
-        CAMPX__Garden__c garden1 = new CAMPX__Garden__c(
-            CAMPX__Manager__c = u1.Id
-        );
-        CAMPX__Garden__c garden2 = new CAMPX__Garden__c(
-            CAMPX__Manager__c = u1.Id
-        );
+       List<CAMPX__Garden__c> gardensToInsert = new List<CAMPX__Garden__c>{
+        new CAMPX__Garden__c(CAMPX__Manager__c = u1.Id),
+        new CAMPX__Garden__c(CAMPX__Manager__c = u1.Id)
+        };
 
-        gardens.add(garden1);
-        gardens.add(garden2);
-        insert gardens;
-        gardens.clear();
+        insert gardensToInsert;
 
-        Task completedTask = [SELECT Id, WhatId, Subject, OwnerId, Status FROM Task WHERE WhatId = :garden1.Id LIMIT 1];
-        completedTask.Status = 'Completed';
-        update completedTask;
+        CAMPX__Garden__c g1 = gardensToInsert[0];
+        CAMPX__Garden__c g2 = gardensToInsert[1];
 
-        garden1.CAMPX__Manager__c = u2.Id;
-        garden2.CAMPX__Manager__c = u2.Id;
-        gardens.add(garden1);
-        gardens.add(garden2);
+       Task g1Task = [
+        SELECT Id, Status
+        FROM Task
+        WHERE WhatId = :g1.Id
+        LIMIT 1
+        ];
+
+        g1Task.Status = 'Completed';
+        update g1Task;
+
+        g1.CAMPX__Manager__c = u2.Id;
+        g2.CAMPX__Manager__c = u2.Id;
 
         Test.startTest();
-        update gardens;
+        update new List<CAMPX__Garden__c>{ g1, g2 };
         Test.stopTest();
 
-        List<CAMPX__Garden__c> insertedGardens = [
-            SELECT Id, CAMPX__Manager__c
-            FROM CAMPX__Garden__c
-            WHERE Id in :gardens
+        List<Task> openTasks = [
+        SELECT Id, WhatId, OwnerId, Subject, Status
+        FROM Task
+        WHERE WhatId IN :new Set<Id>{ g1.Id, g2.Id }
+          AND Status != 'Completed'
         ];
 
-        List<Task> tasks = [
-            SELECT Id, WhatId, Subject, OwnerId, Status
-            FROM Task
-            WHERE WhatId in :insertedGardens AND Status != 'Completed'
-        ];
-
-        System.assertEquals(1, tasks.size());
-        System.assertEquals(insertedGardens[1].id, tasks[0].WhatId);
-        System.assertEquals(insertedGardens[1].CAMPX__Manager__c, tasks[0].OwnerId);
-        System.assertEquals('Acquire Plants', tasks[0].Subject);
-        System.assertNotEquals('Completed', tasks[0].Status);
+        System.assertEquals(1, openTasks.size(),'Only one open task should exist after manager reassignment');
+        Task t = openTasks[0];
+        System.assertEquals(g2.Id, t.WhatId, 'Open task should belong to Garden 2');
+        System.assertEquals(u2.Id, t.OwnerId, 'Task owner should now be the new manager');
+        System.assertEquals('Acquire Plants', t.Subject, 'Task subject should not change');
+        System.assertNotEquals('Completed', t.Status, 'Returned task must be open');
     }
 
 }
