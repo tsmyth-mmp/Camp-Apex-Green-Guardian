@@ -197,4 +197,20 @@ private class GardenTriggerHandlerTest {
         System.assertEquals(null, g2.CAMPX__Manager__c, 'Garden 2 manager should now be removed');
     }
 
+    @isTest
+    static void updateGardenNotManager() {
+        User u1 = [SELECT Id FROM User WHERE Id = :UserInfo.getUserId()];
+        CAMPX__Garden__c  garden = new CAMPX__Garden__c(CAMPX__Manager__c = u1.Id);
+        insert garden;
+        Date currentDate = Date.today();
+        garden.CAMPX__Minimum_Plant_Count__c = 5;
+        Test.startTest();
+        update garden;
+        Test.stopTest();
+        CAMPX__Garden__c actual = [SELECT Id, CAMPX__Minimum_Plant_Count__c, CAMPX__Manager__c, CAMPX__Manager_Start_Date__c FROM CAMPX__Garden__c WHERE Id = :garden.Id LIMIT 1];
+        Assert.areEqual(5, actual.CAMPX__Minimum_Plant_Count__c, 'Minimum plant count should be updated');
+        Assert.areEqual(garden.CAMPX__Manager__c, actual.CAMPX__Manager__c, 'Manager should not have been updated');
+        Assert.areEqual(currentDate, actual.CAMPX__Manager_Start_Date__c, 'Manager start date should not have changed');
+    }
+
 }

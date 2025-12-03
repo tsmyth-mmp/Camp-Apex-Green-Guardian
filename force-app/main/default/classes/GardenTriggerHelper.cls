@@ -171,6 +171,9 @@ public with sharing class GardenTriggerHelper {
             if (managerChanged && garden.CAMPX__Manager__c != null) {
                 garden.CAMPX__Manager_Start_Date__c = Date.today();
             }
+            else if (managerChanged && garden.CAMPX__Manager__c == null) {
+                garden.CAMPX__Manager_Start_Date__c = null;
+            }
         }
         
         // Bulk DML
@@ -203,10 +206,9 @@ public with sharing class GardenTriggerHelper {
             CAMPX__Garden__c oldGarden = oldMap.get(garden.Id);
             CAMPX__Garden__c newGarden = newMap.get(garden.Id);
             if (oldGarden.CAMPX__Manager__c != null && newGarden.CAMPX__Manager__c == null) {
-                garden.CAMPX__Manager_Start_Date__c = null; // set manager start date to null once manager is removed
                 gardenIdsWithManagerRemoved.add(garden.Id);
             }
-        }
+        }       
         
         Set<String> excludedStatuses = new Set<String>{STATUS_COMPLETED};
         List<Task> tasksToDelete = queryTasks(gardenIdsWithManagerRemoved, ACQUIRE_PLANTS_SUBJECT, excludedStatuses);
