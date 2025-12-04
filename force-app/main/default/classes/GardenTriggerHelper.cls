@@ -18,12 +18,12 @@ public with sharing class GardenTriggerHelper {
 
     public void processAfterInsert(List<CAMPX__Garden__c> newRecords, Map<Id, CAMPX__Garden__c> newGardenMap) {
         handleNewTaskCreation(newRecords);
-        calcCapacity(newRecords, null);
+        updateGardenCapacities(newRecords, null);
     }
 
     public void processAfterUpdate(List<CAMPX__Garden__c> oldRecords, List<CAMPX__Garden__c> newRecords, Map<Id, CAMPX__Garden__c> oldMap, Map<Id, CAMPX__Garden__c> newMap) {
         deleteOpenTasksWithoutReplacementManager(oldRecords, newRecords, oldMap, newMap);
-        calcCapacity(newRecords, oldMap);
+        updateGardenCapacities(newRecords, oldMap);
     }
 
      /**
@@ -224,16 +224,42 @@ public with sharing class GardenTriggerHelper {
         }
     }
 
-    private Decimal computeCapacity(CAMPX__Garden__c garden) {
-        if (garden.CAMPX__Max_Plant_Count__c == null || garden.CAMPX__Total_Plant_Count__c == null || garden.CAMPX__Max_Plant_Count__c == 0) {
+    /**
+     * Calculates the capacity percentage for a garden based on its maximum and total plant counts.
+     *
+     * Capacity is defined as: (Total_Plant_Count / Max_Plant_Count) * 100
+     *
+     * If the maximum plant count is null or zero, or if the total plant count is null,
+     * the method returns 0 to avoid invalid arithmetic.
+     *
+     * @param garden  The CAMPX__Garden__c record for which capacity should be calculated.
+     * @return        A Decimal representing the garden's capacity percentage (0–100+).
+     */
+    private Decimal computeGardenCapacity(CAMPX__Garden__c garden) {
+        if (garden.CAMPX__Max_Plant_Count__c == null 
+            || garden.CAMPX__Max_Plant_Count__c == 0
+            || garden.CAMPX__Total_Plant_Count__c == null ) {
             return 0;
         } 
-        return ((Decimal)garden.CAMPX__Total_Plant_Count__c / (Decimal)garden.CAMPX__Max_Plant_Count__c) * 100;
-                    
+        return ((Decimal)garden.CAMPX__Total_Plant_Count__c / (Decimal)garden.CAMPX__Max_Plant_Count__c) * 100;                
     }
 
-    private void calcCapacity(List<CAMPX__Garden__c> gardens, Map<Id, CAMPX__Garden__c> oldMap) {
+    /**
+     * Recalculates and updates the capacity percentage for a list of gardens.
+     *
+     * This method compares the incoming garden records against their previous values
+     * (from oldMap) and only recalculates capacity when the Max Plant Count or Total Plant Count
+     * fields have changed. It also avoids unnecessary DML by updating a record only if the
+     * newly computed capacity differs from the existing stored capacity.
+     *
+     * The method performs one bulk-safe UPDATE operation for all changed gardens.
+     *
+     * @param gardens  List of CAMPX__Garden__c records from the trigger context (new or updated).
+     * @param oldMap   Map of prior versions of these garden records (Trigger.oldMap), or null on insert.
+     */
+    private void updateGardenCapacities(List<CAMPX__Garden__c> gardens, Map<Id, CAMPX__Garden__c> oldMap) {
         List<CAMPX__Garden__c> gardensToUpdate = new List<CAMPX__Garden__c>();
+        
         for (CAMPX__Garden__c garden : gardens) {
             Boolean needsRecalc = true;
             if (oldMap != null && oldMap.containsKey(garden.Id)) {
@@ -241,10 +267,13 @@ public with sharing class GardenTriggerHelper {
                 needsRecalc = garden.CAMPX__Max_Plant_Count__c != oldGarden.CAMPX__Max_Plant_Count__c 
                               || garden.CAMPX__Total_Plant_Count__c != oldGarden.CAMPX__Total_Plant_Count__c;
             }
-            
+
+            Decimal oldCapacity = oldMap != null && oldMap.containsKey(garden.Id) ? oldMap.get(garden.Id).CAMPX__Capacity__c : null;
             if (needsRecalc) {
-                Decimal capacity = computeCapacity(garden);
-                gardensToUpdate.add(new CAMPX__Garden__c(Id = garden.Id, CAMPX__Capacity__c = capacity));
+                Decimal newCapacity = computeGardenCapacity(garden);
+                if (oldCapacity != newCapacity){
+                    gardensToUpdate.add(new CAMPX__Garden__c(Id = garden.Id, CAMPX__Capacity__c = newCapacity));
+                }
             }
         }
 
