@@ -220,7 +220,9 @@ private class GardenTriggerHandlerTest {
       insert(garden);
       Test.stopTest();
       CAMPX__Garden__c actual = [SELECT Id, CAMPX__Capacity__c 
-                                   FROM CAMPX__Garden__c WHERE Id = :garden.Id LIMIT 1];                         
+                                 FROM CAMPX__Garden__c 
+                                 WHERE Id = :garden.Id 
+                                 LIMIT 1];                         
       Assert.areEqual(0, actual.CAMPX__Capacity__c);
     }
 
@@ -229,14 +231,18 @@ private class GardenTriggerHandlerTest {
         CAMPX__Garden__c garden = new CAMPX__Garden__c();
         insert(garden);
         CAMPX__Garden__c beforeUpdate = [SELECT Id, CAMPX__Capacity__c
-                                     FROM CAMPX__Garden__c WHERE Id = :garden.Id LIMIT 1];  
+                                         FROM CAMPX__Garden__c 
+                                         WHERE Id = :garden.Id 
+                                         LIMIT 1];  
         Assert.areEqual(0, beforeUpdate.CAMPX__Capacity__c);
         garden.CAMPX__Total_Plant_Count__c = 10;
         Test.startTest();
         update garden;
         Test.stopTest();
         CAMPX__Garden__c afterUpdate = [SELECT Id, CAMPX__Capacity__c
-                                     FROM CAMPX__Garden__c WHERE Id = :garden.Id LIMIT 1];                         
+                                        FROM CAMPX__Garden__c 
+                                        WHERE Id = :garden.Id 
+                                        LIMIT 1];                         
         Assert.areEqual(10, afterUpdate.CAMPX__Capacity__c);
     }
 
@@ -245,14 +251,18 @@ private class GardenTriggerHandlerTest {
         CAMPX__Garden__c garden = new CAMPX__Garden__c(CAMPX__Total_Plant_Count__c = 100);
         insert(garden);
         CAMPX__Garden__c beforeUpdate = [SELECT Id, CAMPX__Capacity__c
-                                     FROM CAMPX__Garden__c WHERE Id = :garden.Id LIMIT 1];  
+                                         FROM CAMPX__Garden__c 
+                                         WHERE Id = :garden.Id 
+                                         LIMIT 1];  
         Assert.areEqual(100, beforeUpdate.CAMPX__Capacity__c);
         garden.CAMPX__Total_Plant_Count__c = 10;
         Test.startTest();
         update garden;
         Test.stopTest();
         CAMPX__Garden__c afterUpdate = [SELECT Id, CAMPX__Capacity__c
-                                     FROM CAMPX__Garden__c WHERE Id = :garden.Id LIMIT 1];                         
+                                        FROM CAMPX__Garden__c 
+                                        WHERE Id = :garden.Id 
+                                        LIMIT 1];                         
         Assert.areEqual(10, afterUpdate.CAMPX__Capacity__c);
     }
 
@@ -261,14 +271,18 @@ private class GardenTriggerHandlerTest {
         CAMPX__Garden__c garden = new CAMPX__Garden__c(CAMPX__Total_Plant_Count__c = 100);
         insert(garden);
         CAMPX__Garden__c beforeUpdate = [SELECT Id, CAMPX__Capacity__c
-                                     FROM CAMPX__Garden__c WHERE Id = :garden.Id LIMIT 1];  
+                                         FROM CAMPX__Garden__c 
+                                         WHERE Id = :garden.Id 
+                                         LIMIT 1];  
         Assert.areEqual(100, beforeUpdate.CAMPX__Capacity__c);
         garden.CAMPX__Max_Plant_Count__c = 1000;
         Test.startTest();
         update garden;
         Test.stopTest();
         CAMPX__Garden__c afterUpdate = [SELECT Id, CAMPX__Capacity__c
-                                     FROM CAMPX__Garden__c WHERE Id = :garden.Id LIMIT 1];                         
+                                        FROM CAMPX__Garden__c 
+                                        WHERE Id = :garden.Id 
+                                        LIMIT 1];                         
         Assert.areEqual(10, afterUpdate.CAMPX__Capacity__c);
     }
 
@@ -277,14 +291,17 @@ private class GardenTriggerHandlerTest {
         CAMPX__Garden__c garden = new CAMPX__Garden__c(CAMPX__Total_Plant_Count__c = 1);
         insert(garden);
         CAMPX__Garden__c beforeUpdate = [SELECT Id, CAMPX__Capacity__c
-                                     FROM CAMPX__Garden__c WHERE Id = :garden.Id LIMIT 1];  
+                                         FROM CAMPX__Garden__c 
+                                         WHERE Id = :garden.Id 
+                                         LIMIT 1];  
         Assert.areEqual(1, beforeUpdate.CAMPX__Capacity__c);
         garden.CAMPX__Max_Plant_Count__c = 10;
         Test.startTest();
         update garden;
         Test.stopTest();
         CAMPX__Garden__c afterUpdate = [SELECT Id, CAMPX__Capacity__c
-                                     FROM CAMPX__Garden__c WHERE Id = :garden.Id LIMIT 1];                         
+                                        FROM CAMPX__Garden__c 
+                                        WHERE Id = :garden.Id LIMIT 1];                         
         Assert.areEqual(10, afterUpdate.CAMPX__Capacity__c);
     }
 
@@ -293,14 +310,18 @@ private class GardenTriggerHandlerTest {
         CAMPX__Garden__c garden = new CAMPX__Garden__c();
         insert(garden);
         CAMPX__Garden__c beforeUpdate = [SELECT Id, CAMPX__Capacity__c
-                                     FROM CAMPX__Garden__c WHERE Id = :garden.Id LIMIT 1];  
+                                         FROM CAMPX__Garden__c 
+                                         WHERE Id = :garden.Id 
+                                         LIMIT 1];  
         Assert.areEqual(0, beforeUpdate.CAMPX__Capacity__c);
         garden.CAMPX__Total_Plant_Count__c = null;
         Test.startTest();
         update garden;
         Test.stopTest();
         CAMPX__Garden__c afterUpdate = [SELECT Id, CAMPX__Capacity__c
-                                     FROM CAMPX__Garden__c WHERE Id = :garden.Id LIMIT 1];                         
+                                        FROM CAMPX__Garden__c 
+                                        WHERE Id = :garden.Id 
+                                        LIMIT 1];                         
         Assert.areEqual(0, afterUpdate.CAMPX__Capacity__c);
     }
 
@@ -309,15 +330,99 @@ private class GardenTriggerHandlerTest {
         CAMPX__Garden__c garden = new CAMPX__Garden__c();
         insert(garden);
         CAMPX__Garden__c beforeUpdate = [SELECT Id, CAMPX__Capacity__c
-                                     FROM CAMPX__Garden__c WHERE Id = :garden.Id LIMIT 1];  
+                                         FROM CAMPX__Garden__c 
+                                         WHERE Id = :garden.Id 
+                                         LIMIT 1];  
         Assert.areEqual(0, beforeUpdate.CAMPX__Capacity__c);
         garden.CAMPX__Max_Plant_Count__c = 0;
         Test.startTest();
         update garden;
         Test.stopTest();
         CAMPX__Garden__c afterUpdate = [SELECT Id, CAMPX__Capacity__c
-                                     FROM CAMPX__Garden__c WHERE Id = :garden.Id LIMIT 1];                         
+                                        FROM CAMPX__Garden__c 
+                                        WHERE Id = :garden.Id 
+                                        LIMIT 1];                         
         Assert.areEqual(0, afterUpdate.CAMPX__Capacity__c);
+    }
+
+      @isTest
+    static void calcHealthIndex_DecreaseTotalPlantCount() {
+         CAMPX__Garden__c garden = new CAMPX__Garden__c(CAMPX__Total_Unhealthy_Plant_Count__c = 20, CAMPX__Total_Plant_Count__c = 40);
+        insert(garden);
+        CAMPX__Garden__c beforeUpdate = [SELECT Id, CAMPX__Health_Index__c
+                                         FROM CAMPX__Garden__c 
+                                         WHERE Id = :garden.Id 
+                                         LIMIT 1];  
+        garden.CAMPX__Total_Plant_Count__c = 35;
+        Test.startTest();
+        update garden;
+        Test.stopTest();
+        CAMPX__Garden__c afterUpdate = [SELECT Id, CAMPX__Health_Index__c
+                                        FROM CAMPX__Garden__c 
+                                        WHERE Id = :garden.Id 
+                                        LIMIT 1];                         
+        Assert.areNotEqual(beforeUpdate.CAMPX__Health_Index__c, afterUpdate.CAMPX__Health_Index__c);
+
+    }
+
+      @isTest
+    static void calcHealthIndex_IncreaseTotalPlantCount() {
+         CAMPX__Garden__c garden = new CAMPX__Garden__c(CAMPX__Total_Unhealthy_Plant_Count__c = 20, CAMPX__Total_Plant_Count__c = 40);
+        insert(garden);
+        CAMPX__Garden__c beforeUpdate = [SELECT Id, CAMPX__Health_Index__c
+                                         FROM CAMPX__Garden__c 
+                                         WHERE Id = :garden.Id 
+                                         LIMIT 1];  
+        garden.CAMPX__Total_Plant_Count__c = 50;
+        Test.startTest();
+        update garden;
+        Test.stopTest();
+        CAMPX__Garden__c afterUpdate = [SELECT Id, CAMPX__Health_Index__c
+                                        FROM CAMPX__Garden__c 
+                                        WHERE Id = :garden.Id 
+                                        LIMIT 1];                         
+        Assert.areNotEqual(beforeUpdate.CAMPX__Health_Index__c, afterUpdate.CAMPX__Health_Index__c);
+
+    }
+
+    @isTest
+    static void calcHealthIndex_IncreaseTotalUnhealthyCount() {
+         CAMPX__Garden__c garden = new CAMPX__Garden__c(CAMPX__Total_Unhealthy_Plant_Count__c = 20, CAMPX__Total_Plant_Count__c = 40);
+        insert(garden);
+        CAMPX__Garden__c beforeUpdate = [SELECT Id, CAMPX__Health_Index__c
+                                         FROM CAMPX__Garden__c 
+                                         WHERE Id = :garden.Id 
+                                         LIMIT 1];  
+        garden.CAMPX__Total_Unhealthy_Plant_Count__c = 35;
+        Test.startTest();
+        update garden;
+        Test.stopTest();
+        CAMPX__Garden__c afterUpdate = [SELECT Id, CAMPX__Health_Index__c
+                                        FROM CAMPX__Garden__c 
+                                        WHERE Id = :garden.Id 
+                                        LIMIT 1];                         
+        Assert.areEqual(12.5, afterUpdate.CAMPX__Health_Index__c);
+
+    }
+
+      @isTest
+    static void calcHealthIndex_ZeroTotalUnhealthyCount() {
+         CAMPX__Garden__c garden = new CAMPX__Garden__c(CAMPX__Total_Unhealthy_Plant_Count__c = 20, CAMPX__Total_Plant_Count__c = 40);
+        insert(garden);
+        CAMPX__Garden__c beforeUpdate = [SELECT Id, CAMPX__Health_Index__c
+                                         FROM CAMPX__Garden__c 
+                                         WHERE Id = :garden.Id 
+                                         LIMIT 1];  
+        garden.CAMPX__Total_Unhealthy_Plant_Count__c = 0;
+        Test.startTest();
+        update garden;
+        Test.stopTest();
+        CAMPX__Garden__c afterUpdate = [SELECT Id, CAMPX__Health_Index__c
+                                        FROM CAMPX__Garden__c 
+                                        WHERE Id = :garden.Id 
+                                        LIMIT 1];                         
+        Assert.areEqual(100, afterUpdate.CAMPX__Health_Index__c);
+
     }
 
 }
