@@ -1,7 +1,7 @@
 public with sharing class GardenTriggerHelper {
     private static final String ACQUIRE_PLANTS_SUBJECT = 'Acquire Plants';
     private static final String STATUS_AWAITING_RESOURCES = 'Awaiting Resources';
-    private static final String STATUS_COMPLETED = 'Completed';
+    // private static final String STATUS_COMPLETED = 'Completed';
     
     public void processBeforeInsert(List<CAMPX__Garden__c> newRecords) {
             initializeFields(newRecords);
@@ -172,10 +172,11 @@ public with sharing class GardenTriggerHelper {
             // Case 2: Manager changed
             if (managerChanged) {
                 Boolean hasAnyTask = tasksByGardenId.containsKey(garden.id);
+                String statusToCheck = TaskConstants.Status.Completed.name();
                 
                 if (hasAnyTask) {
                     for (Task t : tasksByGardenId.get(garden.Id)) {
-                        if (t.Status != STATUS_COMPLETED) { // skip completed tasks
+                        if (t.Status != statusToCheck) { // skip completed tasks
                             t.OwnerId = garden.CAMPX__Manager__c;
                             tasksToUpdate.add(t);
                         }
@@ -226,7 +227,11 @@ public with sharing class GardenTriggerHelper {
             }
         }       
         
-        Set<String> excludedStatuses = new Set<String>{STATUS_COMPLETED};
+        Set<String> excludedStatuses = new Set<String>();
+        for (TaskConstants.Status s : TaskConstants.EXCLUDED_STATUSES) {
+            excludedStatuses.add(TaskConstants.getStatusLabel(s));
+        }
+
         List<Task> tasksToDelete = queryTasks(gardenIdsWithManagerRemoved, ACQUIRE_PLANTS_SUBJECT, excludedStatuses);
         
         if (!tasksToDelete.isEmpty()) {
