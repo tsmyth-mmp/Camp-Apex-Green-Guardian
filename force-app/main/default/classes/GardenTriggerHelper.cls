@@ -212,7 +212,12 @@ public with sharing class GardenTriggerHelper {
      * @param oldMap Map of original garden records keyed by Id.
      * @param newMap Map of updated garden records keyed by Id.
      */
-    private void deleteOpenTasksWithoutReplacementManager(List<CAMPX__Garden__c> oldRecords, List<CAMPX__Garden__c> newRecords, Map<Id, CAMPX__Garden__c> oldMap, Map<Id, CAMPX__Garden__c> newMap) {
+    private void deleteOpenTasksWithoutReplacementManager(
+        List<CAMPX__Garden__c> oldRecords, 
+        List<CAMPX__Garden__c> newRecords, 
+        Map<Id, CAMPX__Garden__c> oldMap, 
+        Map<Id, CAMPX__Garden__c> newMap
+    ) {
         Set<Id> gardenIdsWithManagerRemoved = new Set<Id>();
         
         for (CAMPX__Garden__c garden : newRecords) {
