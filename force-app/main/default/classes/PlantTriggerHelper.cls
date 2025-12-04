@@ -1,4 +1,8 @@
 public with sharing class PlantTriggerHelper {
+    private static final String STATUS_SICK = 'Sick';
+    private static final String STATUS_WILITING = 'Wilting';
+    private static final String STATUS_DECEASED = 'Deceased';
+
     public void processBeforeInsert(List<CAMPX__Plant__c> newRecords) {
         initializePlants(newRecords);   
     }
@@ -164,11 +168,39 @@ public with sharing class PlantTriggerHelper {
         List<CAMPX__Garden__c> gardensToUpdate = new List<CAMPX__Garden__c>();
         for (Id gardenId : affectedGardenIds) {
             Integer total = gardensTotalPlantCountMap.containsKey(gardenId) ? gardensTotalPlantCountMap.get(gardenId) : 0;
-            gardensToUpdate.add(new CAMPX__Garden__c(Id = gardenId,CAMPX__Total_Plant_Count__c = total));
+            gardensToUpdate.add(new CAMPX__Garden__c(Id = gardenId, CAMPX__Total_Plant_Count__c = total));
         }
 
         if (!gardensToUpdate.isEmpty()) {
             update gardensToUpdate;
         }
+    }
+
+    private void updateGardenUnhealthyPlantCount(List<CAMPX__Plant__c> oldPlants, List<CAMPX__Plant__c> newPlants) {
+        Set<Id> affectedGardenIds = getAffectedGardenIds(oldPlants, newPlants);
+        
+        if (affectedGardenIds.isEmpty()) return;
+
+        Set<String> unhealthyStatuses = new Set<String> {STATUS_SICK, STATUS_WILITING, STATUS_DECEASED};
+
+        Map<Id, Integer> gardensUnhealthyPlantCountMap = new Map<Id, Integer>(); 
+        for (AggregateResult ar : [SELECT CAMPX__Garden__c gardenId, Count(Id) total
+                                   FROM CAMPX__Plant__c 
+                                   WHERE CAMPX__Garden__c IN :affectedGardenIds 
+                                   AND CAMPX__Status__c in :unhealthyStatuses
+                                   GROUP BY CAMPX__Garden__c]
+            ) 
+        {
+            gardensUnhealthyPlantCountMap.put((Id)ar.get('gardenId'), (Integer)ar.get('total'));
+        }
+        
+        List<CAMPX__Garden__c> gardensToUpdate = new List<CAMPX__Garden__c>();
+        for (Id gardenId : affectedGardenIds) {
+            Integer total = gardensUnhealthyPlantCountMap.containsKey(gardenId) ? gardensUnhealthyPlantCountMap.get(gardenId) : 0;
+            gardensToUpdate.add(new CAMPX__Garden__c(Id = gardenId, CAMPX__Total_Unhealthy_Plant_Count__c = total));
+        }
+
+        if (!gardensToUpdate.isEmpty()) 
+            update gardensToUpdate;
     }
 }
