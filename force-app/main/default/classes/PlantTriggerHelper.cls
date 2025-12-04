@@ -1,10 +1,4 @@
 public with sharing class PlantTriggerHelper {
-    private static final String STATUS_SICK = 'Sick';
-    private static final String STATUS_WILITING = 'Wilting';
-    private static final String STATUS_DECEASED = 'Deceased';
-    private static final String WATER_ONCE_WEEKLY = 'Once Weekly';
-    private static final String SOIL_TYPE_ALL_PURPOSE = 'All Purpose Potting Soil';
-
     public void processBeforeInsert(List<CAMPX__Plant__c> newRecords) {
         initializePlants(newRecords);   
     }
@@ -56,9 +50,11 @@ public with sharing class PlantTriggerHelper {
      * @param gardenMap  A map of related garden records keyed by Id, used to fetch sun exposure values.
      */
     private void initializeFields(CAMPX__Plant__c plant, Map<Id, CAMPX__Garden__c> gardenMap) {
-        plant.CAMPX__Soil_Type__c = String.isNotBlank(plant.CAMPX__Soil_Type__c) ? plant.CAMPX__Soil_Type__c : SOIL_TYPE_ALL_PURPOSE;
-        plant.CAMPX__Water__c = plant.CAMPX__Water__c != null ? plant.CAMPX__Water__c : WATER_ONCE_WEEKLY;
-        plant.CAMPX__Sunlight__c = (plant.CAMPX__Garden__c != null && gardenMap.containsKey(plant.CAMPX__Garden__c)) ? gardenMap.get(plant.CAMPX__Garden__c).CAMPX__Sun_Exposure__c : 'Partial Sun';
+        plant.CAMPX__Soil_Type__c = String.isNotBlank(plant.CAMPX__Soil_Type__c) ? plant.CAMPX__Soil_Type__c : PlantConstants.getDefaultSoilTypeLabel();
+        plant.CAMPX__Water__c = plant.CAMPX__Water__c != null ? plant.CAMPX__Water__c : PlantConstants.getDefaultWaterLabel();
+        plant.CAMPX__Sunlight__c = (plant.CAMPX__Garden__c != null && gardenMap.containsKey(plant.CAMPX__Garden__c)) 
+                                    ? gardenMap.get(plant.CAMPX__Garden__c).CAMPX__Sun_Exposure__c 
+                                    : PlantConstants.getDefaultSunlightLabel();
     }
 
     /**
@@ -211,7 +207,10 @@ public with sharing class PlantTriggerHelper {
         
         if (affectedGardenIds.isEmpty()) return;
 
-        Set<String> unhealthyStatuses = new Set<String> {STATUS_SICK, STATUS_WILITING, STATUS_DECEASED};
+        Set<String> unhealthyStatuses = new Set<String>();
+        for (PlantConstants.Status s : PlantConstants.UNHEALTHY_STATUSES) {
+            unhealthyStatuses.add(PlantConstants.getStatusLabel(s));
+        }
 
         Map<Id, Integer> gardensUnhealthyPlantCountMap = new Map<Id, Integer>(); 
         for (AggregateResult ar : [SELECT CAMPX__Garden__c gardenId, Count(Id) total
