@@ -281,14 +281,18 @@ public with sharing class GardenTriggerHelper {
             if (oldMap != null && oldMap.containsKey(garden.Id)) {
                 CAMPX__Garden__c oldGarden = oldMap.get(garden.Id);
                 needsRecalc = garden.CAMPX__Max_Plant_Count__c != oldGarden.CAMPX__Max_Plant_Count__c 
-                              || garden.CAMPX__Total_Plant_Count__c != oldGarden.CAMPX__Total_Plant_Count__c;
+                              || garden.CAMPX__Total_Plant_Count__c != oldGarden.CAMPX__Total_Plant_Count__c
+                              || garden.CAMPX__Total_Unhealthy_Plant_Count__c != oldGarden.CAMPX__Total_Unhealthy_Plant_Count__c;
             }
 
             Decimal oldCapacity = oldMap != null && oldMap.containsKey(garden.Id) ? oldMap.get(garden.Id).CAMPX__Capacity__c : null;
             if (needsRecalc) {
                 Decimal newCapacity = computeGardenCapacity(garden);
                 if (oldCapacity != newCapacity){
-                    gardensToUpdate.add(new CAMPX__Garden__c(Id = garden.Id, CAMPX__Capacity__c = newCapacity));
+                    gardensToUpdate.add(new CAMPX__Garden__c(Id = garden.Id, CAMPX__Capacity__c = newCapacity, CAMPX__Health_Index__c = computeGardenHealthIndex(garden)));
+                }
+                else {
+                    gardensToUpdate.add(new CAMPX__Garden__c(Id = garden.Id, CAMPX__Health_Index__c = computeGardenHealthIndex(garden)));
                 }
             }
         }
@@ -296,5 +300,12 @@ public with sharing class GardenTriggerHelper {
         if (!gardensToUpdate.isEmpty()) {
             update gardensToUpdate;
         }
+    }
+
+    public Decimal computeGardenHealthIndex(CAMPX__Garden__c garden) {
+        Decimal totalPlantCount = (Decimal)garden.CAMPX__Total_Plant_Count__c;
+        Decimal totalUnhealthyCount = (Decimal)garden.CAMPX__Total_Unhealthy_Plant_Count__c;
+        if (totalPlantCount == null || totalPlantCount <= 0) return 0;
+        return ((totalPlantCount - totalUnhealthyCount) / totalPlantCount) * 100;
     }
 }
