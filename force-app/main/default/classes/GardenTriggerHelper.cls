@@ -224,38 +224,32 @@ public with sharing class GardenTriggerHelper {
         }
     }
 
+    private Decimal computeCapacity(CAMPX__Garden__c garden) {
+        if (garden.CAMPX__Max_Plant_Count__c == null || garden.CAMPX__Total_Plant_Count__c == null || garden.CAMPX__Max_Plant_Count__c == 0) {
+            return 0;
+        } 
+        return ((Decimal)garden.CAMPX__Total_Plant_Count__c / (Decimal)garden.CAMPX__Max_Plant_Count__c) * 100;
+                    
+    }
+
     private void calcCapacity(List<CAMPX__Garden__c> gardens, Map<Id, CAMPX__Garden__c> oldMap) {
         List<CAMPX__Garden__c> gardensToUpdate = new List<CAMPX__Garden__c>();
-        List<CAMPX__Garden__c> gardensToInsert = new List<CAMPX__Garden__c>();
         for (CAMPX__Garden__c garden : gardens) {
+            Boolean needsRecalc = true;
             if (oldMap != null && oldMap.containsKey(garden.Id)) {
                 CAMPX__Garden__c oldGarden = oldMap.get(garden.Id);
-                if (garden.CAMPX__Max_Plant_Count__c != oldGarden.CAMPX__Max_Plant_Count__c 
-                    || garden.CAMPX__Total_Plant_Count__c != oldGarden.CAMPX__Total_Plant_Count__c) {
-                    gardensToUpdate.add(new CAMPX__Garden__c(Id =garden.Id, 
-                                                             CAMPX__Capacity__c = garden.CAMPX__Max_Plant_Count__c == 0
-                                                              || garden.CAMPX__Total_Plant_Count__c == 0 
-                                                              || garden.CAMPX__Max_Plant_Count__c == null 
-                                                              || garden.CAMPX__Total_Plant_Count__c == null
-                                                                ? 0 
-                                                                : (garden.CAMPX__Total_Plant_Count__c / garden.CAMPX__Max_Plant_Count__c) * 100));
-                }
-            } else {
-                 gardensToUpdate.add(new CAMPX__Garden__c(Id =garden.Id, 
-                                                          CAMPX__Capacity__c = garden.CAMPX__Max_Plant_Count__c == 0 
-                                                          || garden.CAMPX__Total_Plant_Count__c == 0 
-                                                          || garden.CAMPX__Max_Plant_Count__c == null 
-                                                          || garden.CAMPX__Total_Plant_Count__c == null
-                                                            ? 0 
-                                                            : (garden.CAMPX__Total_Plant_Count__c / garden.CAMPX__Max_Plant_Count__c) * 100));
+                needsRecalc = garden.CAMPX__Max_Plant_Count__c != oldGarden.CAMPX__Max_Plant_Count__c 
+                              || garden.CAMPX__Total_Plant_Count__c != oldGarden.CAMPX__Total_Plant_Count__c;
+            }
+            
+            if (needsRecalc) {
+                Decimal capacity = computeCapacity(garden);
+                gardensToUpdate.add(new CAMPX__Garden__c(Id = garden.Id, CAMPX__Capacity__c = capacity));
             }
         }
 
         if (!gardensToUpdate.isEmpty()) {
             update gardensToUpdate;
-        }
-        if (!gardensToInsert.isEmpty()) {
-            insert gardensToInsert;
         }
     }
 }
