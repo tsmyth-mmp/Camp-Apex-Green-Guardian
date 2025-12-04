@@ -1,8 +1,4 @@
 public with sharing class PlantTriggerHelper {
-    private static final String STATUS_SICK = PlantConstants.getStatusLabel(PlantConstants.Status.Sick);
-    private static final String STATUS_WILITING = PlantConstants.getStatusLabel(PlantConstants.Status.Wilting);
-    private static final String STATUS_DECEASED = PlantConstants.getStatusLabel(PlantConstants.Status.Deceased);
-
     public void processBeforeInsert(List<CAMPX__Plant__c> newRecords) {
         initializePlants(newRecords);   
     }
@@ -211,7 +207,10 @@ public with sharing class PlantTriggerHelper {
         
         if (affectedGardenIds.isEmpty()) return;
 
-        Set<String> unhealthyStatuses = new Set<String> {STATUS_SICK, STATUS_WILITING, STATUS_DECEASED};
+        Set<String> unhealthyStatuses = new Set<String>();
+        for (PlantConstants.Status s : PlantConstants.UNHEALTHY_STATUSES) {
+            unhealthyStatuses.add(PlantConstants.getStatusLabel(s));
+        }
 
         Map<Id, Integer> gardensUnhealthyPlantCountMap = new Map<Id, Integer>(); 
         for (AggregateResult ar : [SELECT CAMPX__Garden__c gardenId, Count(Id) total
