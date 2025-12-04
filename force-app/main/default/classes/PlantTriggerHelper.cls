@@ -2,6 +2,8 @@ public with sharing class PlantTriggerHelper {
     private static final String STATUS_SICK = 'Sick';
     private static final String STATUS_WILITING = 'Wilting';
     private static final String STATUS_DECEASED = 'Deceased';
+    private static final String WATER_ONCE_WEEKLY = 'Once Weekly';
+    private static final String SOIL_TYPE_ALL_PURPOSE = 'All Purpose Potting Soil';
 
     public void processBeforeInsert(List<CAMPX__Plant__c> newRecords) {
         initializePlants(newRecords);   
@@ -54,25 +56,25 @@ public with sharing class PlantTriggerHelper {
      * @param gardenMap  A map of related garden records keyed by Id, used to fetch sun exposure values.
      */
     private void initializeFields(CAMPX__Plant__c plant, Map<Id, CAMPX__Garden__c> gardenMap) {
-        plant.CAMPX__Soil_Type__c = String.isNotBlank(plant.CAMPX__Soil_Type__c) ? plant.CAMPX__Soil_Type__c : 'All Purpose Potting Soil';
-        plant.CAMPX__Water__c = plant.CAMPX__Water__c != null ? plant.CAMPX__Water__c : 'Once Weekly';
+        plant.CAMPX__Soil_Type__c = String.isNotBlank(plant.CAMPX__Soil_Type__c) ? plant.CAMPX__Soil_Type__c : SOIL_TYPE_ALL_PURPOSE;
+        plant.CAMPX__Water__c = plant.CAMPX__Water__c != null ? plant.CAMPX__Water__c : WATER_ONCE_WEEKLY;
         plant.CAMPX__Sunlight__c = (plant.CAMPX__Garden__c != null && gardenMap.containsKey(plant.CAMPX__Garden__c)) ? gardenMap.get(plant.CAMPX__Garden__c).CAMPX__Sun_Exposure__c : 'Partial Sun';
     }
 
     /**
-     * Extracts and returns a set of unique garden Ids referenced by the given plants.
-     *
-     * This helper scans the list of plant records and gathers the Ids of any gardens
-     * they are assigned to. Null garden references are ignored.
-     *
-     * @param plants  The list of plant records to inspect.
-     * @return        A Set<Id> containing unique garden Ids referenced by the plants.
-     */
+      * Extracts a set of unique garden Ids referenced by a list of plant records.
+      *
+      * This helper scans the provided list and gathers the Ids of gardens assigned
+      * to each plant, ignoring null references. Useful for bulk operations and inserts.
+      *
+      * @param plants  The list of plant records to inspect.
+      * @return        A Set<Id> containing unique garden Ids referenced by the plants.
+      */
     private Set<Id> createGardenIdSet(List<CAMPX__Plant__c> plants) {
         Set<Id> gardenIds = new Set<Id>();
         if (plants != null) {
             for (CAMPX__Plant__c plant : plants) {
-                if (plant.CAMPX__Garden__c != null || (Trigger.isBefore && Trigger.isInsert)) {
+                if (plant.CAMPX__Garden__c != null || (Trigger.isBefore && Trigger.isInsert)) { // need to check if trigger is before and insert since gardens can be null
                     gardenIds.add(plant.CAMPX__Garden__c);
                 }
             }
@@ -101,20 +103,22 @@ public with sharing class PlantTriggerHelper {
     }
 
     /**
-     * Determines which gardens are affected by changes in plant assignments.
+     * Determines which gardens are affected by changes in plant records.
      *
      * This method compares old and new versions of plant records to identify
-     * gardens whose plant counts may need to be recalculated. A garden is
-     * considered affected when a plant is moved into or out of it.
+     * gardens whose unhealthy plant counts may need to be recalculated. A garden
+     * is considered affected when a plant is moved, its status changes, or plants
+     * are inserted or deleted.
      *
      * Special handling:
-     *   - If both old and new lists are provided, each pair is compared by index.
-     *   - If only oldPlants is provided, all referenced gardens are included.
-     *   - If only newPlants is provided, all referenced gardens are included.
+     *   - If both oldPlants and newPlants are provided, they are compared by index.
+     *   - The larger list is used to prevent index errors when list sizes differ.
+     *   - If only oldPlants is provided (delete), all referenced gardens are included.
+     *   - If only newPlants is provided (insert), all referenced gardens are included.
      *
-     * @param oldPlants  The original list of plant records (from Trigger.old), or null.
-     * @param newPlants  The updated list of plant records (from Trigger.new), or null.
-     * @return           A Set<Id> of garden Ids whose plant counts need recalculation.
+     * @param oldPlants  The original list of plant records (Trigger.old), or null.
+     * @param newPlants  The updated list of plant records (Trigger.new), or null.
+     * @return           A Set<Id> of garden Ids whose unhealthy plant counts may have changed.
      */
     private Set<Id> getAffectedGardenIds(List<CAMPX__Plant__c> oldPlants, List<CAMPX__Plant__c> newPlants) {
         Set<Id> gardenIds = new Set<Id>();
@@ -183,6 +187,25 @@ public with sharing class PlantTriggerHelper {
         }
     }
 
+    /**
+     * Updates the total number of unhealthy plants for affected gardens.
+     *
+     * This method calculates the current number of unhealthy plants for each
+     * affected garden and updates the corresponding field on the CAMPX__Garden__c
+     * object. It handles bulk operations, garden moves, status changes, inserts,
+     * and deletes.
+     *
+     * Steps:
+     *   1. Determine affected gardens using getAffectedGardenIds.
+     *   2. Query the current count of unhealthy plants per garden.
+     *   3. Prepare garden records with updated counts.
+     *   4. Perform a single bulk update for efficiency.
+     *
+     * Unhealthy statuses are defined by the set: STATUS_SICK, STATUS_WILTING, STATUS_DECEASED.
+     *
+     * @param oldPlants  The original list of plant records (Trigger.old), or null.
+     * @param newPlants  The updated list of plant records (Trigger.new), or null.
+     */
     private void updateGardenUnhealthyPlantCount(List<CAMPX__Plant__c> oldPlants, List<CAMPX__Plant__c> newPlants) {
         Set<Id> affectedGardenIds = getAffectedGardenIds(oldPlants, newPlants);
         
