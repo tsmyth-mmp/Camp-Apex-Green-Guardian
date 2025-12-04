@@ -19,7 +19,7 @@ public with sharing class GardenTriggerHelper {
 
     public void processAfterInsert(List<CAMPX__Garden__c> newRecords, Map<Id, CAMPX__Garden__c> newGardenMap) {
         handleNewTaskCreation(newRecords);
-        updateGardenCapacities(newRecords, null);
+        refreshGardenCalculatedFields(newRecords, null);
     }
 
     public void processAfterUpdate(
@@ -29,7 +29,7 @@ public with sharing class GardenTriggerHelper {
         Map<Id, CAMPX__Garden__c> newMap
         ) {
         deleteOpenTasksWithoutReplacementManager(oldRecords, newRecords, oldMap, newMap);
-        updateGardenCapacities(newRecords, oldMap);
+        refreshGardenCalculatedFields(newRecords, oldMap);
     }
 
      /**
@@ -261,40 +261,62 @@ public with sharing class GardenTriggerHelper {
     }
 
     /**
-     * Recalculates and updates the capacity percentage for a list of gardens.
+     * Refreshes the calculated fields (Capacity and Health Index) for a list of gardens.
      *
-     * This method compares the incoming garden records against their previous values
-     * (from oldMap) and only recalculates capacity when the Max Plant Count or Total Plant Count
-     * fields have changed. It also avoids unnecessary DML by updating a record only if the
-     * newly computed capacity differs from the existing stored capacity.
+     * This method compares the current garden records against their previous values 
+     * (from oldMap) and only recalculates Capacity and Health Index when the relevant 
+     * input fields have changed:
+     *   - CAMPX__Max_Plant_Count__c
+     *   - CAMPX__Total_Plant_Count__c
+     *   - CAMPX__Total_Unhealthy_Plant_Count__c
      *
-     * The method performs one bulk-safe UPDATE operation for all changed gardens.
+     * It avoids unnecessary DML by updating a record only if the newly computed 
+     * values differ from the stored values. All updates are performed in a single 
+     * bulk-safe operation.
      *
      * @param gardens  List of CAMPX__Garden__c records from the trigger context (new or updated).
-     * @param oldMap   Map of prior versions of these garden records (Trigger.oldMap), or null on insert.
+     * @param oldMap   Map of prior versions of these garden records (Trigger.oldMap), or null if not available.
      */
-    private void updateGardenCapacities(List<CAMPX__Garden__c> gardens, Map<Id, CAMPX__Garden__c> oldMap) {
-        List<CAMPX__Garden__c> gardensToUpdate = new List<CAMPX__Garden__c>();
+    private void refreshGardenCalculatedFields(List<CAMPX__Garden__c> gardens, Map<Id, CAMPX__Garden__c> oldMap) {
+        Map<Id, CAMPX__Garden__c> gardensToUpdate = new Map<Id, CAMPX__Garden__c>();
         
         for (CAMPX__Garden__c garden : gardens) {
-            Boolean needsRecalc = true;
-            if (oldMap != null && oldMap.containsKey(garden.Id)) {
-                CAMPX__Garden__c oldGarden = oldMap.get(garden.Id);
-                needsRecalc = garden.CAMPX__Max_Plant_Count__c != oldGarden.CAMPX__Max_Plant_Count__c 
-                              || garden.CAMPX__Total_Plant_Count__c != oldGarden.CAMPX__Total_Plant_Count__c;
-            }
+            CAMPX__Garden__c oldGarden = (oldMap != null && oldMap.containsKey(garden.Id)) ? oldMap.get(garden.Id) : null;
+            Boolean needsRecalc = oldGarden == null 
+                ||garden.CAMPX__Max_Plant_Count__c != oldGarden.CAMPX__Max_Plant_Count__c 
+                || garden.CAMPX__Total_Plant_Count__c != oldGarden.CAMPX__Total_Plant_Count__c
+                || garden.CAMPX__Total_Unhealthy_Plant_Count__c != oldGarden.CAMPX__Total_Unhealthy_Plant_Count__c;
+            
+            if (!needsRecalc) continue;
 
-            Decimal oldCapacity = oldMap != null && oldMap.containsKey(garden.Id) ? oldMap.get(garden.Id).CAMPX__Capacity__c : null;
-            if (needsRecalc) {
-                Decimal newCapacity = computeGardenCapacity(garden);
-                if (oldCapacity != newCapacity){
-                    gardensToUpdate.add(new CAMPX__Garden__c(Id = garden.Id, CAMPX__Capacity__c = newCapacity));
-                }
+            Decimal newCapacity = computeGardenCapacity(garden);
+            Decimal newHealthIndex = computeGardenHealthIndex(garden);
+
+            CAMPX__Garden__c gardenToUpdate = new CAMPX__Garden__c(Id = garden.Id);
+            Boolean shouldUpdate = false;
+
+            if (oldGarden == null || oldGarden.CAMPX__Capacity__c != newCapacity){
+                gardenToUpdate.CAMPX__Capacity__c = newCapacity;
+                shouldUpdate = true;
             }
+            if (oldGarden == null || oldGarden.CAMPX__Health_Index__c != newHealthIndex) {
+                 gardenToUpdate.CAMPX__Health_Index__c = newHealthIndex;
+                 shouldUpdate = true;
+            }
+            if (shouldUpdate) {
+                gardensToUpdate.put(garden.Id, gardenToUpdate);
+            }      
         }
 
         if (!gardensToUpdate.isEmpty()) {
-            update gardensToUpdate;
+            update gardensToUpdate.values();
         }
+    }
+
+    public Decimal computeGardenHealthIndex(CAMPX__Garden__c garden) {
+        Decimal totalPlantCount = (Decimal)garden.CAMPX__Total_Plant_Count__c;
+        Decimal totalUnhealthyCount = (Decimal)garden.CAMPX__Total_Unhealthy_Plant_Count__c;
+        if (totalPlantCount == null || totalPlantCount <= 0) return 0;
+        return ((totalPlantCount - totalUnhealthyCount) / totalPlantCount) * 100;
     }
 }
