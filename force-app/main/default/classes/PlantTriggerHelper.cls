@@ -69,7 +69,7 @@ public with sharing class PlantTriggerHelper {
         Set<Id> gardenIds = new Set<Id>();
         if (plants != null) {
             for (CAMPX__Plant__c plant : plants) {
-                if (plant.CAMPX__Garden__c != null) {
+                if (plant.CAMPX__Garden__c != null || (Trigger.isBefore && Trigger.isInsert)) {
                     gardenIds.add(plant.CAMPX__Garden__c);
                 }
             }
