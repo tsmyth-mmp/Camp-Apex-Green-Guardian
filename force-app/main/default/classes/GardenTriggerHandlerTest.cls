@@ -425,4 +425,26 @@ private class GardenTriggerHandlerTest {
 
     }
 
+     @isTest
+    static void setStatus_IncreaseCapacity() {
+        CAMPX__Garden__c garden = new CAMPX__Garden__c(CAMPX__Max_Plant_Count__c = 0);
+        insert(garden);
+        CAMPX__Garden__c beforeUpdate = [SELECT Id, CAMPX__Capacity__c, CAMPX__Status__c
+                                         FROM CAMPX__Garden__c 
+                                         WHERE Id = :garden.Id 
+                                         LIMIT 1];  
+        Assert.areEqual(0, beforeUpdate.CAMPX__Capacity__c);
+        garden.CAMPX__Total_Plant_Count__c = 9;
+        garden.CAMPX__Max_Plant_Count__c = 10;
+        Test.startTest();
+        update garden;
+        Test.stopTest();
+        CAMPX__Garden__c afterUpdate = [SELECT Id, CAMPX__Capacity__c, CAMPX__Status__c
+                                        FROM CAMPX__Garden__c 
+                                        WHERE Id = :garden.Id 
+                                        LIMIT 1];                         
+        Assert.areEqual(90, afterUpdate.CAMPX__Capacity__c);
+        Assert.areEqual('Operational', afterUpdate.CAMPX__Status__c);
+    }
+
 }
