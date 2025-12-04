@@ -3,13 +3,16 @@ public with sharing class GardenTriggerHelper {
     private static final String STATUS_AWAITING_RESOURCES = 'Awaiting Resources';
     private static final String STATUS_COMPLETED = 'Completed';
     
-    public void processBeforeInsert(List<CAMPX__Garden__c> gardens) {
-        for (CAMPX__Garden__c garden : gardens) {
-            initializeFields(garden);
-        }
+    public void processBeforeInsert(List<CAMPX__Garden__c> newRecords) {
+            initializeFields(newRecords);
     }
 
-   public void processBeforeUpdate(List<CAMPX__Garden__c> oldRecords, List<CAMPX__Garden__c> newRecords, Map<Id, CAMPX__Garden__c> oldMap, Map<Id, CAMPX__Garden__c> newMap) {
+   public void processBeforeUpdate(
+        List<CAMPX__Garden__c> oldRecords,
+        List<CAMPX__Garden__c> newRecords, 
+        Map<Id, CAMPX__Garden__c> oldMap, 
+        Map<Id, CAMPX__Garden__c> newMap
+    ) {
         handleManagerChange(newRecords, oldMap);
     }
 
@@ -18,21 +21,19 @@ public with sharing class GardenTriggerHelper {
     }
 
 
-    public void processAfterInsert(List<CAMPX__Garden__c> gardens, Map<Id, CAMPX__Garden__c> newGardenMap) {
-        List<Task> newTasks = new List<Task>();
-        for (CAMPX__Garden__c garden : gardens) {
-            if (garden.CAMPX__Manager__c != null) {
-                newTasks.add(createNewTask(garden));
-            }
-        }
-        
-        if (!newTasks.isEmpty()){
-            insert(newTasks);
-        }
+    public void processAfterInsert(List<CAMPX__Garden__c> newRecords, Map<Id, CAMPX__Garden__c> newGardenMap) {
+        handleNewTaskCreation(newRecords);
+        updateGardenCapacities(newRecords, null);
     }
 
-    public void processAfterUpdate(List<CAMPX__Garden__c> oldRecords, List<CAMPX__Garden__c> newRecords, Map<Id, CAMPX__Garden__c> oldMap, Map<Id, CAMPX__Garden__c> newMap) {
+    public void processAfterUpdate(
+        List<CAMPX__Garden__c> oldRecords,
+        List<CAMPX__Garden__c> newRecords,
+        Map<Id, CAMPX__Garden__c> oldMap, 
+        Map<Id, CAMPX__Garden__c> newMap
+        ) {
         deleteOpenTasksWithoutReplacementManager(oldRecords, newRecords, oldMap, newMap);
+        updateGardenCapacities(newRecords, oldMap);
     }
 
      /**
@@ -40,13 +41,15 @@ public with sharing class GardenTriggerHelper {
      *
      * @param garden CAMPX__Garden__c record to initialize.
      */
-    private void initializeFields(CAMPX__Garden__c garden) {
-        garden.CAMPX__Status__c = garden.CAMPX__Status__c ?? STATUS_AWAITING_RESOURCES;
-        garden.CAMPX__Max_Plant_Count__c = garden.CAMPX__Max_Plant_Count__c ?? 100;
-        garden.CAMPX__Minimum_Plant_Count__c = garden.CAMPX__Minimum_Plant_Count__c ?? 1;
-        garden.CAMPX__Total_Plant_Count__c = garden.CAMPX__Total_Plant_Count__c ?? 0;
-        garden.CAMPX__Total_Unhealthy_Plant_Count__c = garden.CAMPX__Total_Unhealthy_Plant_Count__c ?? 0;
-        if (garden.CAMPX__Manager__c != null) garden.CAMPX__Manager_Start_Date__c = Date.today();
+    private void initializeFields(List<CAMPX__Garden__c> gardens) {
+        for (CAMPX__Garden__c garden : gardens) {
+            garden.CAMPX__Status__c = garden.CAMPX__Status__c ?? STATUS_AWAITING_RESOURCES;
+            garden.CAMPX__Max_Plant_Count__c = garden.CAMPX__Max_Plant_Count__c ?? 100;
+            garden.CAMPX__Minimum_Plant_Count__c = garden.CAMPX__Minimum_Plant_Count__c ?? 1;
+            garden.CAMPX__Total_Plant_Count__c = garden.CAMPX__Total_Plant_Count__c ?? 0;
+            garden.CAMPX__Total_Unhealthy_Plant_Count__c = garden.CAMPX__Total_Unhealthy_Plant_Count__c ?? 0;
+            if (garden.CAMPX__Manager__c != null) garden.CAMPX__Manager_Start_Date__c = Date.today();
+        }
     }
 
     /**
@@ -61,6 +64,19 @@ public with sharing class GardenTriggerHelper {
             OwnerId = garden.CAMPX__Manager__c,
             Subject = ACQUIRE_PLANTS_SUBJECT);
         return newTask;
+    }
+
+    private void handleNewTaskCreation(List<CAMPX__Garden__c> gardens) {
+        List<Task> newTasks = new List<Task>();
+        for (CAMPX__Garden__c garden : gardens) {
+            if (garden.CAMPX__Manager__c != null) {
+                newTasks.add(createNewTask(garden));
+            }
+        }
+        
+        if (!newTasks.isEmpty()){
+            insert(newTasks);
+        }
     }
 
     /**
@@ -215,6 +231,64 @@ public with sharing class GardenTriggerHelper {
         
         if (!tasksToDelete.isEmpty()) {
             delete tasksToDelete;
+        }
+    }
+
+    /**
+     * Calculates the capacity percentage for a garden based on its maximum and total plant counts.
+     *
+     * Capacity is defined as: (Total_Plant_Count / Max_Plant_Count) * 100
+     *
+     * If the maximum plant count is null or zero, or if the total plant count is null,
+     * the method returns 0 to avoid invalid arithmetic.
+     *
+     * @param garden  The CAMPX__Garden__c record for which capacity should be calculated.
+     * @return        A Decimal representing the garden's capacity percentage (0–100+).
+     */
+    private Decimal computeGardenCapacity(CAMPX__Garden__c garden) {
+        if (garden.CAMPX__Max_Plant_Count__c == null 
+            || garden.CAMPX__Max_Plant_Count__c == 0
+            || garden.CAMPX__Total_Plant_Count__c == null ) {
+            return 0;
+        } 
+        return ((Decimal)garden.CAMPX__Total_Plant_Count__c / (Decimal)garden.CAMPX__Max_Plant_Count__c) * 100;                
+    }
+
+    /**
+     * Recalculates and updates the capacity percentage for a list of gardens.
+     *
+     * This method compares the incoming garden records against their previous values
+     * (from oldMap) and only recalculates capacity when the Max Plant Count or Total Plant Count
+     * fields have changed. It also avoids unnecessary DML by updating a record only if the
+     * newly computed capacity differs from the existing stored capacity.
+     *
+     * The method performs one bulk-safe UPDATE operation for all changed gardens.
+     *
+     * @param gardens  List of CAMPX__Garden__c records from the trigger context (new or updated).
+     * @param oldMap   Map of prior versions of these garden records (Trigger.oldMap), or null on insert.
+     */
+    private void updateGardenCapacities(List<CAMPX__Garden__c> gardens, Map<Id, CAMPX__Garden__c> oldMap) {
+        List<CAMPX__Garden__c> gardensToUpdate = new List<CAMPX__Garden__c>();
+        
+        for (CAMPX__Garden__c garden : gardens) {
+            Boolean needsRecalc = true;
+            if (oldMap != null && oldMap.containsKey(garden.Id)) {
+                CAMPX__Garden__c oldGarden = oldMap.get(garden.Id);
+                needsRecalc = garden.CAMPX__Max_Plant_Count__c != oldGarden.CAMPX__Max_Plant_Count__c 
+                              || garden.CAMPX__Total_Plant_Count__c != oldGarden.CAMPX__Total_Plant_Count__c;
+            }
+
+            Decimal oldCapacity = oldMap != null && oldMap.containsKey(garden.Id) ? oldMap.get(garden.Id).CAMPX__Capacity__c : null;
+            if (needsRecalc) {
+                Decimal newCapacity = computeGardenCapacity(garden);
+                if (oldCapacity != newCapacity){
+                    gardensToUpdate.add(new CAMPX__Garden__c(Id = garden.Id, CAMPX__Capacity__c = newCapacity));
+                }
+            }
+        }
+
+        if (!gardensToUpdate.isEmpty()) {
+            update gardensToUpdate;
         }
     }
 }
