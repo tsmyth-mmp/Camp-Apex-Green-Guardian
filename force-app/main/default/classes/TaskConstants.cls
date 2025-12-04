@@ -1,5 +1,8 @@
 public class TaskConstants {
     public enum Status { NotStarted, InProgress, Completed, WaitingOnSomeoneElse, Deferred }
+    public enum Subject { AcquirePlants }
+
+    public static final Subject DEFAULT_SUBJECT = Subject.AcquirePlants;
     
     public static final Set<Status> EXCLUDED_STATUSES = new Set<Status>{ Status.Completed };
 
@@ -11,6 +14,14 @@ public class TaskConstants {
         Status.Deferred => 'Deferred'
     };
 
+    public static final Map<Subject, String> SUBJECT_LABELS = new Map<Subject, String> {
+        Subject.AcquirePlants => 'Acquire Plants'
+    };
+
     public static String getStatusLabel(Status status) { return STATUS_LABELS.get(status); }
+
+    public static String getSubjectLabel(Subject subject) { return SUBJECT_LABELS.get(subject); }
+
+    public static String getDefaultSubjectLabel() { return getSubjectLabel(DEFAULT_SUBJECT); }
 
 }
