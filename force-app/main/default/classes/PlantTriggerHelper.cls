@@ -34,6 +34,7 @@ public with sharing class PlantTriggerHelper {
 
     public void processAfterDelete(List<CAMPX__Plant__c> oldRecords, Map<Id, CAMPX__Plant__c> oldMap) {
         updateGardenTotalPlantCount(oldRecords, null);
+        updateGardenUnhealthyPlantCount(oldRecords, null);
     }
 
     /**
