@@ -18,6 +18,7 @@ public with sharing class PlantTriggerHelper {
 
     public void processAfterInsert(List<CAMPX__Plant__c> newRecords, Map<Id, CAMPX__Plant__c> newMap) {
         updateGardenTotalPlantCount(null, newRecords);
+        updateGardenUnhealthyPlantCount(null, newRecords);
     }
 
     public void processAfterUpdate(
@@ -28,6 +29,7 @@ public with sharing class PlantTriggerHelper {
          
     ) {
         updateGardenTotalPlantCount(oldRecords, newRecords);
+        updateGardenUnhealthyPlantCount(oldRecords, newRecords);
     }
 
     public void processAfterDelete(List<CAMPX__Plant__c> oldRecords, Map<Id, CAMPX__Plant__c> oldMap) {
@@ -115,13 +117,17 @@ public with sharing class PlantTriggerHelper {
      */
     private Set<Id> getAffectedGardenIds(List<CAMPX__Plant__c> oldPlants, List<CAMPX__Plant__c> newPlants) {
         Set<Id> gardenIds = new Set<Id>();
+        Integer largerList = (oldPlants != null && newPlants != null) ? Math.max(oldPlants.size(), newPlants.size()) : 0;
 
         if (oldPlants != null && newPlants != null) {
-            for (Integer i = 0; i < oldPlants.size(); i++) {
+            for (Integer i = 0; i < largerList; i++) {
                 Id oldId = oldPlants[i].CAMPX__Garden__c;
                 Id newId = newPlants[i].CAMPX__Garden__c;
 
                 if (oldId != newId) {
+                    if (oldId != null) gardenIds.add(oldId);
+                    if (newId != null) gardenIds.add(newId);
+                } else {
                     if (oldId != null) gardenIds.add(oldId);
                     if (newId != null) gardenIds.add(newId);
                 } 
