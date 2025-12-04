@@ -7,7 +7,12 @@ public with sharing class GardenTriggerHelper {
             initializeFields(newRecords);
     }
 
-   public void processBeforeUpdate(List<CAMPX__Garden__c> oldRecords, List<CAMPX__Garden__c> newRecords, Map<Id, CAMPX__Garden__c> oldMap, Map<Id, CAMPX__Garden__c> newMap) {
+   public void processBeforeUpdate(
+        List<CAMPX__Garden__c> oldRecords,
+        List<CAMPX__Garden__c> newRecords, 
+        Map<Id, CAMPX__Garden__c> oldMap, 
+        Map<Id, CAMPX__Garden__c> newMap
+    ) {
         handleManagerChange(newRecords, oldMap);
     }
 
@@ -21,7 +26,12 @@ public with sharing class GardenTriggerHelper {
         updateGardenCapacities(newRecords, null);
     }
 
-    public void processAfterUpdate(List<CAMPX__Garden__c> oldRecords, List<CAMPX__Garden__c> newRecords, Map<Id, CAMPX__Garden__c> oldMap, Map<Id, CAMPX__Garden__c> newMap) {
+    public void processAfterUpdate(
+        List<CAMPX__Garden__c> oldRecords,
+        List<CAMPX__Garden__c> newRecords,
+        Map<Id, CAMPX__Garden__c> oldMap, 
+        Map<Id, CAMPX__Garden__c> newMap
+        ) {
         deleteOpenTasksWithoutReplacementManager(oldRecords, newRecords, oldMap, newMap);
         updateGardenCapacities(newRecords, oldMap);
     }
