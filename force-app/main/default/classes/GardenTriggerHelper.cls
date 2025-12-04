@@ -3,10 +3,8 @@ public with sharing class GardenTriggerHelper {
     private static final String STATUS_AWAITING_RESOURCES = 'Awaiting Resources';
     private static final String STATUS_COMPLETED = 'Completed';
     
-    public void processBeforeInsert(List<CAMPX__Garden__c> gardens) {
-        for (CAMPX__Garden__c garden : gardens) {
-            initializeFields(garden);
-        }
+    public void processBeforeInsert(List<CAMPX__Garden__c> newRecords) {
+            initializeFields(newRecords);
     }
 
    public void processBeforeUpdate(List<CAMPX__Garden__c> oldRecords, List<CAMPX__Garden__c> newRecords, Map<Id, CAMPX__Garden__c> oldMap, Map<Id, CAMPX__Garden__c> newMap) {
@@ -18,17 +16,8 @@ public with sharing class GardenTriggerHelper {
     }
 
 
-    public void processAfterInsert(List<CAMPX__Garden__c> gardens, Map<Id, CAMPX__Garden__c> newGardenMap) {
-        List<Task> newTasks = new List<Task>();
-        for (CAMPX__Garden__c garden : gardens) {
-            if (garden.CAMPX__Manager__c != null) {
-                newTasks.add(createNewTask(garden));
-            }
-        }
-        
-        if (!newTasks.isEmpty()){
-            insert(newTasks);
-        }
+    public void processAfterInsert(List<CAMPX__Garden__c> newRecords, Map<Id, CAMPX__Garden__c> newGardenMap) {
+        handleNewTaskCreation(newRecords);
     }
 
     public void processAfterUpdate(List<CAMPX__Garden__c> oldRecords, List<CAMPX__Garden__c> newRecords, Map<Id, CAMPX__Garden__c> oldMap, Map<Id, CAMPX__Garden__c> newMap) {
@@ -40,13 +29,15 @@ public with sharing class GardenTriggerHelper {
      *
      * @param garden CAMPX__Garden__c record to initialize.
      */
-    private void initializeFields(CAMPX__Garden__c garden) {
-        garden.CAMPX__Status__c = garden.CAMPX__Status__c ?? STATUS_AWAITING_RESOURCES;
-        garden.CAMPX__Max_Plant_Count__c = garden.CAMPX__Max_Plant_Count__c ?? 100;
-        garden.CAMPX__Minimum_Plant_Count__c = garden.CAMPX__Minimum_Plant_Count__c ?? 1;
-        garden.CAMPX__Total_Plant_Count__c = garden.CAMPX__Total_Plant_Count__c ?? 0;
-        garden.CAMPX__Total_Unhealthy_Plant_Count__c = garden.CAMPX__Total_Unhealthy_Plant_Count__c ?? 0;
-        if (garden.CAMPX__Manager__c != null) garden.CAMPX__Manager_Start_Date__c = Date.today();
+    private void initializeFields(List<CAMPX__Garden__c> gardens) {
+        for (CAMPX__Garden__c garden : gardens) {
+            garden.CAMPX__Status__c = garden.CAMPX__Status__c ?? STATUS_AWAITING_RESOURCES;
+            garden.CAMPX__Max_Plant_Count__c = garden.CAMPX__Max_Plant_Count__c ?? 100;
+            garden.CAMPX__Minimum_Plant_Count__c = garden.CAMPX__Minimum_Plant_Count__c ?? 1;
+            garden.CAMPX__Total_Plant_Count__c = garden.CAMPX__Total_Plant_Count__c ?? 0;
+            garden.CAMPX__Total_Unhealthy_Plant_Count__c = garden.CAMPX__Total_Unhealthy_Plant_Count__c ?? 0;
+            if (garden.CAMPX__Manager__c != null) garden.CAMPX__Manager_Start_Date__c = Date.today();
+        }
     }
 
     /**
@@ -61,6 +52,19 @@ public with sharing class GardenTriggerHelper {
             OwnerId = garden.CAMPX__Manager__c,
             Subject = ACQUIRE_PLANTS_SUBJECT);
         return newTask;
+    }
+
+    private void handleNewTaskCreation(List<CAMPX__Garden__c> gardens) {
+        List<Task> newTasks = new List<Task>();
+        for (CAMPX__Garden__c garden : gardens) {
+            if (garden.CAMPX__Manager__c != null) {
+                newTasks.add(createNewTask(garden));
+            }
+        }
+        
+        if (!newTasks.isEmpty()){
+            insert(newTasks);
+        }
     }
 
     /**
@@ -215,6 +219,41 @@ public with sharing class GardenTriggerHelper {
         
         if (!tasksToDelete.isEmpty()) {
             delete tasksToDelete;
+        }
+    }
+
+    private void calcCapacity(List<CAMPX__Garden__c> gardens, Map<Id, CAMPX__Garden__c> oldMap) {
+        List<CAMPX__Garden__c> gardensToUpdate = new List<CAMPX__Garden__c>();
+        List<CAMPX__Garden__c> gardensToInsert = new List<CAMPX__Garden__c>();
+        for (CAMPX__Garden__c garden : gardens) {
+            if (oldMap != null && oldMap.containsKey(garden.Id)) {
+                CAMPX__Garden__c oldGarden = oldMap.get(garden.Id);
+                if (garden.CAMPX__Max_Plant_Count__c != oldGarden.CAMPX__Max_Plant_Count__c 
+                    || garden.CAMPX__Total_Plant_Count__c != oldGarden.CAMPX__Total_Plant_Count__c) {
+                    gardensToUpdate.add(new CAMPX__Garden__c(Id =garden.Id, 
+                                                             CAMPX__Capacity__c = garden.CAMPX__Max_Plant_Count__c == 0
+                                                              || garden.CAMPX__Total_Plant_Count__c == 0 
+                                                              || garden.CAMPX__Max_Plant_Count__c == null 
+                                                              || garden.CAMPX__Total_Plant_Count__c == null
+                                                                ? 0 
+                                                                : (garden.CAMPX__Total_Plant_Count__c / garden.CAMPX__Max_Plant_Count__c) * 100));
+                }
+            } else {
+                 gardensToUpdate.add(new CAMPX__Garden__c(Id =garden.Id, 
+                                                          CAMPX__Capacity__c = garden.CAMPX__Max_Plant_Count__c == 0 
+                                                          || garden.CAMPX__Total_Plant_Count__c == 0 
+                                                          || garden.CAMPX__Max_Plant_Count__c == null 
+                                                          || garden.CAMPX__Total_Plant_Count__c == null
+                                                            ? 0 
+                                                            : (garden.CAMPX__Total_Plant_Count__c / garden.CAMPX__Max_Plant_Count__c) * 100));
+            }
+        }
+
+        if (!gardensToUpdate.isEmpty()) {
+            update gardensToUpdate;
+        }
+        if (!gardensToInsert.isEmpty()) {
+            insert gardensToInsert;
         }
     }
 }
