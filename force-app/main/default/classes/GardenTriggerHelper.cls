@@ -18,6 +18,7 @@ public with sharing class GardenTriggerHelper {
 
     public void processAfterInsert(List<CAMPX__Garden__c> newRecords, Map<Id, CAMPX__Garden__c> newGardenMap) {
         handleNewTaskCreation(newRecords);
+        calcCapacity(newRecords, null);
     }
 
     public void processAfterUpdate(List<CAMPX__Garden__c> oldRecords, List<CAMPX__Garden__c> newRecords, Map<Id, CAMPX__Garden__c> oldMap, Map<Id, CAMPX__Garden__c> newMap) {
