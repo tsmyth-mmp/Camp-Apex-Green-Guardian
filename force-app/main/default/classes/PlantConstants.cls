@@ -58,6 +58,6 @@ public class PlantConstants {
     }
 
     public static String getDefaultSunlightLabel() {
-        return getSunlightLabel(Sunlight.FullSun);
+        return getSunlightLabel(Sunlight.PartialSun);
     }
 }
