@@ -23,6 +23,7 @@ public with sharing class GardenTriggerHelper {
 
     public void processAfterUpdate(List<CAMPX__Garden__c> oldRecords, List<CAMPX__Garden__c> newRecords, Map<Id, CAMPX__Garden__c> oldMap, Map<Id, CAMPX__Garden__c> newMap) {
         deleteOpenTasksWithoutReplacementManager(oldRecords, newRecords, oldMap, newMap);
+        calcCapacity(newRecords, oldMap);
     }
 
      /**
