@@ -346,24 +346,43 @@ public with sharing class GardenTriggerHelper {
         } 
     }
 
-    private void reassignNegativeValues(List<CAMPX__Garden__c> gardens) {
-        for (CAMPX__Garden__c garden : gardens) {
-            if (garden.CAMPX__Total_Plant_Count__c < 0) {
-                garden.addError('Plant Count fields must be greater than or equal to zero');
-            }
-            if (garden.CAMPX__Total_Unhealthy_Plant_Count__c < 0) {
-                garden.addError('Plant Count fields must be greater than or equal to zero');
-            }
-            if (garden.CAMPX__Minimum_Plant_Count__c < 0) {
-                garden.addError('Plant Count fields must be greater than or equal to zero');
-            }
-            if (garden.CAMPX__Max_Plant_Count__c < 0) {
-                garden.addError('Plant Count fields must be greater than or equal to zero');
-            }
+    private void checkForNegativeValues(CAMPX__Garden__c garden) {
+        if (garden.CAMPX__Total_Plant_Count__c < 0) {
+            garden.addError('Plant Count fields must be greater than or equal to zero');
+        }
+        if (garden.CAMPX__Total_Unhealthy_Plant_Count__c < 0) {
+            garden.addError('Plant Count fields must be greater than or equal to zero');
+        }
+        if (garden.CAMPX__Minimum_Plant_Count__c < 0) {
+            garden.addError('Plant Count fields must be greater than or equal to zero');
+        }
+        if (garden.CAMPX__Max_Plant_Count__c < 0) {
+            garden.addError('Plant Count fields must be greater than or equal to zero');
+        }
+    }
+
+    private void checkForBlankValues(CAMPX__Garden__c garden) {
+        if (garden.CAMPX__Total_Plant_Count__c > 0 
+            && (garden.CAMPX__Max_Plant_Count__c == null 
+            || garden.CAMPX__Minimum_Plant_Count__c == null)
+        ) {
+            garden.addError('Maximum and Minimum Plant Count fields cannot be blank when there are plants in the Garden.');
+        }  
+    }
+
+    private void checkForValidRange(CAMPX__Garden__c garden) {
+        if ((garden.CAMPX__Max_Plant_Count__c != null || garden.CAMPX__Minimum_Plant_Count__c != null ) 
+            && (garden.CAMPX__Max_Plant_Count__c < garden.CAMPX__Minimum_Plant_Count__c)
+        ) {
+            garden.addError('The Maximum Plant Count must be greater than or equal to the Minimum Plant Count');
         }
     }
 
     private void validationCheck(List<CAMPX__Garden__c> gardens) {
-        reassignNegativeValues(gardens);
+        for (CAMPX__Garden__c garden : gardens) {
+            checkForNegativeValues(garden);
+            checkForBlankValues(garden);
+            checkForValidRange(garden);
+        }
     }
 }
