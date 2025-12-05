@@ -1,7 +1,6 @@
 public with sharing class GardenTriggerHelper {
     public void processBeforeInsert(List<CAMPX__Garden__c> newRecords) {
             initializeFields(newRecords);
-            setGardenCalculatedFields(newRecords);
     }
 
     public void processBeforeUpdate(
@@ -11,6 +10,7 @@ public with sharing class GardenTriggerHelper {
         Map<Id, CAMPX__Garden__c> newMap
     ) {
         handleManagerChange(newRecords, oldMap);
+        setGardenCalculatedFields(newRecords);
     }
 
     public void processBeforeDelete(List<CAMPX__Garden__c> oldRecords, Map<Id, CAMPX__Garden__c> oldMap) {
@@ -20,6 +20,8 @@ public with sharing class GardenTriggerHelper {
 
     public void processAfterInsert(List<CAMPX__Garden__c> newRecords, Map<Id, CAMPX__Garden__c> newGardenMap) {
         handleNewTaskCreation(newRecords);
+        refreshGardenCalculatedFields(newRecords, null);
+        setStatusByCondition(newRecords, null);
     }
 
     public void processAfterUpdate(
@@ -299,7 +301,6 @@ public with sharing class GardenTriggerHelper {
 
             Decimal newCapacity = computeGardenCapacity(garden);
             Decimal newHealthIndex = computeGardenHealthIndex(garden);
-            // String permClose = GardenConstants.getStatusLabel(GardenConstants.Status.PermanentClosure);
 
             CAMPX__Garden__c gardenToUpdate = new CAMPX__Garden__c(Id = garden.Id);
             Boolean shouldUpdate = false;
@@ -312,10 +313,6 @@ public with sharing class GardenTriggerHelper {
                  gardenToUpdate.CAMPX__Health_Index__c = newHealthIndex;
                  shouldUpdate = true;
             }
-            // if (oldGarden == null || garden.CAMPX__Status__c != permClose) {
-            //     gardenToUpdate.CAMPX__Status__c = setStatusByCondition(garden);
-            //     shouldUpdate = true;
-            // }
 
             if (shouldUpdate) {
                 gardensToUpdate.put(garden.Id, gardenToUpdate);
@@ -347,8 +344,6 @@ public with sharing class GardenTriggerHelper {
             CAMPX__Garden__c gardenToUpdate = new CAMPX__Garden__c(Id = garden.Id);
             
             if (!needsReset) continue;
-
-            // Boolean shouldUpdate = false;
             
             if (
                 (100 >= garden.CAMPX__Capacity__c && garden.CAMPX__Capacity__c >= 70)
