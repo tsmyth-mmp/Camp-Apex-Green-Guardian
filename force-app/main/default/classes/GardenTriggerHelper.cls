@@ -1,7 +1,7 @@
 public with sharing class GardenTriggerHelper {
     public void processBeforeInsert(List<CAMPX__Garden__c> newRecords) {
             initializeFields(newRecords);
-            refreshGardenCalculatedFields(newRecords, null);
+            setGardenCalculatedFields(newRecords);
             setStatusByCondition(newRecords, null);
     }
 
@@ -12,7 +12,6 @@ public with sharing class GardenTriggerHelper {
         Map<Id, CAMPX__Garden__c> newMap
     ) {
         handleManagerChange(newRecords, oldMap);
-        setGardenCalculatedFields(newRecords);
         refreshGardenCalculatedFields(newRecords, oldMap);
         setStatusByCondition(newRecords, oldMap);
     }
@@ -346,8 +345,7 @@ public with sharing class GardenTriggerHelper {
                 || garden.CAMPX__Minimum_Plant_Count__c > garden.CAMPX__Total_Plant_Count__c
             ) {
                 garden.CAMPX__Status__c = GardenConstants.getStatusLabel(GardenConstants.Status.AwaitingResources);
-            }
-            
+            }        
         } 
     }
 }
