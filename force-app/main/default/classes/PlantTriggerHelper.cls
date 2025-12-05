@@ -1,6 +1,7 @@
 public with sharing class PlantTriggerHelper {
     public void processBeforeInsert(List<CAMPX__Plant__c> newRecords) {
-        initializePlants(newRecords);   
+        initializePlants(newRecords);
+        checkForClosedGardens(newRecords);   
     }
 
     public void processBeforeUpdate(
@@ -9,7 +10,7 @@ public with sharing class PlantTriggerHelper {
         Map<Id, CAMPX__Plant__c> oldMap, 
         Map<Id, CAMPX__Plant__c> newMap 
     ) {
-        
+        checkForClosedGardens(newRecords);
     }
 
     public void processAfterInsert(List<CAMPX__Plant__c> newRecords, Map<Id, CAMPX__Plant__c> newMap) {
@@ -120,25 +121,21 @@ public with sharing class PlantTriggerHelper {
         Set<Id> gardenIds = new Set<Id>();
         Integer largerList = (oldPlants != null && newPlants != null) ? Math.max(oldPlants.size(), newPlants.size()) : 0;
 
-        if (oldPlants != null && newPlants != null) {
-            for (Integer i = 0; i < largerList; i++) {
-                Id oldId = oldPlants[i].CAMPX__Garden__c;
-                Id newId = newPlants[i].CAMPX__Garden__c;
-
-                if (oldId != newId) {
-                    if (oldId != null) gardenIds.add(oldId);
-                    if (newId != null) gardenIds.add(newId);
-                } else {
-                    if (oldId != null) gardenIds.add(oldId);
-                    if (newId != null) gardenIds.add(newId);
-                } 
-            }
-        } else if (oldPlants != null) {
-            gardenIds.addAll(createGardenIdSet(oldPlants));
-
-        } else if (newPlants != null) {
-            gardenIds.addAll(createGardenIdSet(newPlants));
+        if (newPlants != null) {
+            for (CAMPX__Plant__c plant : newPlants) {
+                if (plant.CAMPX__Garden__c != null) {
+                    gardenIds.add(plant.CAMPX__Garden__c);
+                }
+            }       
         }
+
+        if (oldPlants != null) {
+            for (CAMPX__Plant__c plant : oldPlants) {
+                if (plant.CAMPX__Garden__c != null) {
+                    gardenIds.add(plant.CAMPX__Garden__c);
+            }
+        }
+    }
 
         return gardenIds;
     }
@@ -231,5 +228,30 @@ public with sharing class PlantTriggerHelper {
 
         if (!gardensToUpdate.isEmpty()) 
             update gardensToUpdate;
+    }
+
+    private void checkForClosedGardens(List<CAMPX__Plant__c> newPlants) {
+        Set<Id> affectedGardenIds = getAffectedGardenIds(null, newPlants);
+        
+        if (affectedGardenIds.isEmpty()) return;
+
+        Map<Id, CAMPX__Garden__c> gardensById = new Map<Id, CAMPX__Garden__c>(
+            [
+                SELECT Id, CAMPX__Status__c 
+                FROM CAMPX__Garden__c 
+                WHERE Id IN :affectedGardenIds
+            ]
+        );
+
+        for (CAMPX__Plant__c plant : newPlants) {
+            if (plant.CAMPX__Garden__c == null) continue;
+
+            CAMPX__Garden__c garden = gardensById.get(plant.CAMPX__Garden__c);
+            if (garden == null) continue;
+
+            if (garden.CAMPX__Status__c == GardenConstants.getStatusLabel(GardenConstants.Status.PermanentClosure)) {
+                plant.addError('The garden selected for this plant is permanently closed. Please select a different garden.');
+            }
+        }
     }
 }
