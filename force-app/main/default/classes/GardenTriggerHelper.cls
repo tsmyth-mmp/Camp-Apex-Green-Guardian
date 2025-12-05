@@ -1,5 +1,6 @@
 public with sharing class GardenTriggerHelper {
     public void processBeforeInsert(List<CAMPX__Garden__c> newRecords) {
+        validationCheck(newRecords);
         initializeFields(newRecords);
         refreshGardenCalculatedFields(newRecords, null);
         setStatusByCondition(newRecords, null);
@@ -11,6 +12,7 @@ public with sharing class GardenTriggerHelper {
         Map<Id, CAMPX__Garden__c> oldMap, 
         Map<Id, CAMPX__Garden__c> newMap
     ) {
+        validationCheck(newRecords);
         handleManagerChange(newRecords, oldMap);
         refreshGardenCalculatedFields(newRecords, oldMap);
         setStatusByCondition(newRecords, oldMap);
@@ -34,6 +36,8 @@ public with sharing class GardenTriggerHelper {
         ) {
         deleteOpenTasksWithoutReplacementManager(oldRecords, newRecords, oldMap, newMap);
     }
+
+    /*************************************HELPER METHODS*************************************/
 
      /**
      * Initializes default field values on a garden record if null or blank.
@@ -340,5 +344,26 @@ public with sharing class GardenTriggerHelper {
                 garden.CAMPX__Status__c = GardenConstants.getStatusLabel(GardenConstants.Status.AwaitingResources);
             }        
         } 
+    }
+
+    private void reassignNegativeValues(List<CAMPX__Garden__c> gardens) {
+        for (CAMPX__Garden__c garden : gardens) {
+            if (garden.CAMPX__Total_Plant_Count__c < 0) {
+                garden.addError('Plant Count fields must be greater than or equal to zero');
+            }
+            if (garden.CAMPX__Total_Unhealthy_Plant_Count__c < 0) {
+                garden.addError('Plant Count fields must be greater than or equal to zero');
+            }
+            if (garden.CAMPX__Minimum_Plant_Count__c < 0) {
+                garden.addError('Plant Count fields must be greater than or equal to zero');
+            }
+            if (garden.CAMPX__Max_Plant_Count__c < 0) {
+                garden.addError('Plant Count fields must be greater than or equal to zero');
+            }
+        }
+    }
+
+    private void validationCheck(List<CAMPX__Garden__c> gardens) {
+        reassignNegativeValues(gardens);
     }
 }
