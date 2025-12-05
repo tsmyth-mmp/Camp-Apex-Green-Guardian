@@ -1,6 +1,7 @@
 public with sharing class GardenTriggerHelper {
     public void processBeforeInsert(List<CAMPX__Garden__c> newRecords) {
             initializeFields(newRecords);
+            setGardenCalculatedFields(newRecords);
     }
 
    public void processBeforeUpdate(
@@ -19,7 +20,6 @@ public with sharing class GardenTriggerHelper {
 
     public void processAfterInsert(List<CAMPX__Garden__c> newRecords, Map<Id, CAMPX__Garden__c> newGardenMap) {
         handleNewTaskCreation(newRecords);
-        refreshGardenCalculatedFields(newRecords, null);
     }
 
     public void processAfterUpdate(
@@ -258,6 +258,13 @@ public with sharing class GardenTriggerHelper {
             return 0;
         } 
         return ((Decimal)garden.CAMPX__Total_Plant_Count__c / (Decimal)garden.CAMPX__Max_Plant_Count__c) * 100;                
+    }
+
+    private void setGardenCalculatedFields(List<CAMPX__Garden__c> gardens) {
+        for (CAMPX__Garden__c garden : gardens) {
+            garden.CAMPX__Capacity__c = computeGardenCapacity(garden);
+            garden.CAMPX__Health_Index__c = computeGardenHealthIndex(garden);
+        }
     }
 
     /**
