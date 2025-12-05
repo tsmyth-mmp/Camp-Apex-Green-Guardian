@@ -4,7 +4,7 @@ public with sharing class GardenTriggerHelper {
             setGardenCalculatedFields(newRecords);
     }
 
-   public void processBeforeUpdate(
+    public void processBeforeUpdate(
         List<CAMPX__Garden__c> oldRecords,
         List<CAMPX__Garden__c> newRecords, 
         Map<Id, CAMPX__Garden__c> oldMap, 
@@ -30,6 +30,7 @@ public with sharing class GardenTriggerHelper {
         ) {
         deleteOpenTasksWithoutReplacementManager(oldRecords, newRecords, oldMap, newMap);
         refreshGardenCalculatedFields(newRecords, oldMap);
+        setStatusByCondition(newRecords, oldMap);
     }
 
      /**
@@ -298,7 +299,7 @@ public with sharing class GardenTriggerHelper {
 
             Decimal newCapacity = computeGardenCapacity(garden);
             Decimal newHealthIndex = computeGardenHealthIndex(garden);
-            String permClose = GardenConstants.getStatusLabel(GardenConstants.Status.PermanentClosure);
+            // String permClose = GardenConstants.getStatusLabel(GardenConstants.Status.PermanentClosure);
 
             CAMPX__Garden__c gardenToUpdate = new CAMPX__Garden__c(Id = garden.Id);
             Boolean shouldUpdate = false;
@@ -311,10 +312,10 @@ public with sharing class GardenTriggerHelper {
                  gardenToUpdate.CAMPX__Health_Index__c = newHealthIndex;
                  shouldUpdate = true;
             }
-            if (oldGarden == null || garden.CAMPX__Status__c != permClose) {
-                gardenToUpdate.CAMPX__Status__c = setStatusByCondition(garden);
-                shouldUpdate = true;
-            }
+            // if (oldGarden == null || garden.CAMPX__Status__c != permClose) {
+            //     gardenToUpdate.CAMPX__Status__c = setStatusByCondition(garden);
+            //     shouldUpdate = true;
+            // }
 
             if (shouldUpdate) {
                 gardensToUpdate.put(garden.Id, gardenToUpdate);
@@ -333,27 +334,48 @@ public with sharing class GardenTriggerHelper {
         return ((totalPlantCount - totalUnhealthyCount) / totalPlantCount) * 100;
     }
 
-    private String setStatusByCondition(CAMPX__Garden__c garden) {
-        if (
-            (100 >= garden.CAMPX__Capacity__c && garden.CAMPX__Capacity__c >= 70)
-            && garden.CAMPX__Total_Plant_Count__c >= garden.CAMPX__Minimum_Plant_Count__c 
-            && garden.CAMPX__Health_Index__c >= 70
-        ) {
-            return GardenConstants.getStatusLabel(GardenConstants.Status.Operational);
-        } 
-        else if (garden.CAMPX__Capacity__c == 0) {
-            return GardenConstants.getStatusLabel(GardenConstants.Status.TemporaryClosure);
-        } 
-        else if (garden.CAMPX__Capacity__c > 100) {
-            return GardenConstants.getStatusLabel(GardenConstants.Status.OverCapacity);
-        } 
-        else if (
-            (70 > garden.CAMPX__Capacity__c && garden.CAMPX__Capacity__c > 0) 
-            || 70 > garden.CAMPX__Health_Index__c
-            || garden.CAMPX__Minimum_Plant_Count__c > garden.CAMPX__Total_Plant_Count__c
-        ) {
-            return GardenConstants.getStatusLabel(GardenConstants.Status.AwaitingResources);
+    private void setStatusByCondition(List<CAMPX__Garden__c> gardens, Map<Id, CAMPX__Garden__c> oldMap) {
+        Map<Id, CAMPX__Garden__c> gardensToUpdate = new Map<Id, CAMPX__Garden__c>();
+        
+        for (CAMPX__Garden__c garden : gardens) {
+            if (garden.CAMPX__Status__c == GardenConstants.getStatusLabel(GardenConstants.Status.PermanentClosure)) continue;
+            
+            CAMPX__Garden__c oldGarden = (oldMap != null && oldMap.containsKey(garden.Id)) ? oldMap.get(garden.Id) : null;
+            Boolean needsReset = oldGarden == null 
+                || garden.CAMPX__Capacity__c != oldGarden.CAMPX__Capacity__c 
+                || garden.CAMPX__Health_Index__c != oldGarden.CAMPX__Health_Index__c;
+            CAMPX__Garden__c gardenToUpdate = new CAMPX__Garden__c(Id = garden.Id);
+            
+            if (!needsReset) continue;
+
+            // Boolean shouldUpdate = false;
+            
+            if (
+                (100 >= garden.CAMPX__Capacity__c && garden.CAMPX__Capacity__c >= 70)
+                && garden.CAMPX__Total_Plant_Count__c >= garden.CAMPX__Minimum_Plant_Count__c 
+                && garden.CAMPX__Health_Index__c >= 70
+            ) {
+                gardenToUpdate.CAMPX__Status__c = GardenConstants.getStatusLabel(GardenConstants.Status.Operational);
+            } 
+            else if (garden.CAMPX__Capacity__c == 0) {
+                gardenToUpdate.CAMPX__Status__c = GardenConstants.getStatusLabel(GardenConstants.Status.TemporaryClosure);
+            } 
+            else if (garden.CAMPX__Capacity__c > 100) {
+                gardenToUpdate.CAMPX__Status__c = GardenConstants.getStatusLabel(GardenConstants.Status.OverCapacity);
+            } 
+            else if (
+                (70 > garden.CAMPX__Capacity__c && garden.CAMPX__Capacity__c > 0) 
+                || 70 > garden.CAMPX__Health_Index__c
+                || garden.CAMPX__Minimum_Plant_Count__c > garden.CAMPX__Total_Plant_Count__c
+            ) {
+                gardenToUpdate.CAMPX__Status__c = GardenConstants.getStatusLabel(GardenConstants.Status.AwaitingResources);
+            }
+            
+            gardensToUpdate.put(garden.Id, gardenToUpdate);
         }
-        return GardenConstants.getDefaultStatusLabel();
+
+        if (!gardensToUpdate.isEmpty()) {
+            update gardensToUpdate.values();
+        }      
     }
 }
