@@ -46,7 +46,6 @@ public with sharing class GardenTriggerHelper {
      */
     private void initializeFields(List<CAMPX__Garden__c> gardens) {
         for (CAMPX__Garden__c garden : gardens) {
-            garden.CAMPX__Status__c = garden.CAMPX__Status__c ?? GardenConstants.getDefaultStatusLabel();
             garden.CAMPX__Max_Plant_Count__c = garden.CAMPX__Max_Plant_Count__c ?? 100;
             garden.CAMPX__Minimum_Plant_Count__c = garden.CAMPX__Minimum_Plant_Count__c ?? 1;
             garden.CAMPX__Total_Plant_Count__c = garden.CAMPX__Total_Plant_Count__c ?? 0;
