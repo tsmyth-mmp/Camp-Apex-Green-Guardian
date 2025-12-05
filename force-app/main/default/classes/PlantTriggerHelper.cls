@@ -1,7 +1,7 @@
 public with sharing class PlantTriggerHelper {
     public void processBeforeInsert(List<CAMPX__Plant__c> newRecords) {
         initializePlants(newRecords);
-        checkForClosedGardens(newRecords);   
+        checkForClosedGardens(null, newRecords);   
     }
 
     public void processBeforeUpdate(
@@ -10,7 +10,7 @@ public with sharing class PlantTriggerHelper {
         Map<Id, CAMPX__Plant__c> oldMap, 
         Map<Id, CAMPX__Plant__c> newMap 
     ) {
-        checkForClosedGardens(newRecords);
+        checkForClosedGardens(oldRecords, newRecords);
     }
 
     public void processAfterInsert(List<CAMPX__Plant__c> newRecords, Map<Id, CAMPX__Plant__c> newMap) {
@@ -119,8 +119,7 @@ public with sharing class PlantTriggerHelper {
      */
     private Set<Id> getAffectedGardenIds(List<CAMPX__Plant__c> oldPlants, List<CAMPX__Plant__c> newPlants) {
         Set<Id> gardenIds = new Set<Id>();
-        Integer largerList = (oldPlants != null && newPlants != null) ? Math.max(oldPlants.size(), newPlants.size()) : 0;
-
+        
         if (newPlants != null) {
             for (CAMPX__Plant__c plant : newPlants) {
                 if (plant.CAMPX__Garden__c != null) {
@@ -230,8 +229,8 @@ public with sharing class PlantTriggerHelper {
             update gardensToUpdate;
     }
 
-    private void checkForClosedGardens(List<CAMPX__Plant__c> newPlants) {
-        Set<Id> affectedGardenIds = getAffectedGardenIds(null, newPlants);
+    private void checkForClosedGardens(List<CAMPX__Plant__c> oldPlants, List<CAMPX__Plant__c> newPlants) {
+        Set<Id> affectedGardenIds = getAffectedGardenIds(oldPlants, newPlants);
         
         if (affectedGardenIds.isEmpty()) return;
 
@@ -243,12 +242,18 @@ public with sharing class PlantTriggerHelper {
             ]
         );
 
-        for (CAMPX__Plant__c plant : newPlants) {
-            if (plant.CAMPX__Garden__c == null) continue;
-
-            CAMPX__Garden__c garden = gardensById.get(plant.CAMPX__Garden__c);
+        for (Integer i = 0; i < newPlants.size(); i++) {
+            CAMPX__Plant__c plant = newPlants[i];
+            
+            // Check if garden changed
+            Id oldGardenId = (oldPlants != null && oldPlants.size() > i) ? oldPlants[i].CAMPX__Garden__c : null;
+            Id newGardenId = plant.CAMPX__Garden__c;
+            
+            if (newGardenId == null || newGardenId == oldGardenId) continue;
+            
+            CAMPX__Garden__c garden = gardensById.get(newGardenId);
             if (garden == null) continue;
-
+            
             if (garden.CAMPX__Status__c == GardenConstants.getStatusLabel(GardenConstants.Status.PermanentClosure)) {
                 plant.addError('The garden selected for this plant is permanently closed. Please select a different garden.');
             }

@@ -15,7 +15,7 @@ public with sharing class PlantTriggerHandler implements ITriggerHandler {
         List<CAMPX__Plant__c> newPlants = (List<CAMPX__Plant__c>) newRecords;
         Map<Id, CAMPX__Plant__c> oldMap = (Map<Id, CAMPX__Plant__c>) oldRecordMap;
         Map<Id, CAMPX__Plant__c> newMap = (Map<Id, CAMPX__Plant__c>) newRecordMap;
-        // helper.processBeforeUpdate(oldPlants, newPlants);
+        helper.processBeforeUpdate(oldPlants, newPlants, oldMap, newMap);
     }
 
     public void beforeDelete(List<SObject> oldRecords, Map<Id, SObject> oldRecordMap) {

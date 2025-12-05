@@ -1,7 +1,7 @@
 public with sharing class GardenTriggerHelper {
     public void processBeforeInsert(List<CAMPX__Garden__c> newRecords) {
-        validationCheck(newRecords);
         initializeFields(newRecords);
+        validationCheck(newRecords);
         refreshGardenCalculatedFields(newRecords, null);
         setStatusByCondition(newRecords, null);
     }

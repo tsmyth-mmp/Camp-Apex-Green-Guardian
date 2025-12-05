@@ -182,4 +182,130 @@ private class PlantTriggerHandlerTest {
         Assert.areEqual(1, [SELECT CAMPX__Total_Unhealthy_Plant_Count__c FROM CAMPX__Garden__c WHERE Id = :garden1.Id].CAMPX__Total_Unhealthy_Plant_Count__c);
         Assert.areEqual(1, [SELECT CAMPX__Total_Unhealthy_Plant_Count__c FROM CAMPX__Garden__c WHERE Id = :garden2.Id].CAMPX__Total_Unhealthy_Plant_Count__c);
     }
+
+    // -------------------------------------------------------------
+    // 1. Creating a plant in a permanently closed garden → ERROR
+    // -------------------------------------------------------------
+    @isTest
+    static void testCreatePlantClosedGardenThrowsError() {
+        CAMPX__Garden__c closedGarden = new CAMPX__Garden__c(CAMPX__Status__c = GardenConstants.getStatusLabel(GardenConstants.Status.PermanentClosure));
+        insert closedGarden;
+
+        CAMPX__Plant__c p = new CAMPX__Plant__c(CAMPX__Garden__c = closedGarden.Id);
+
+        Test.startTest();
+        Database.SaveResult sr = Database.insert(p, false);
+        Test.stopTest();
+
+        System.assert(!sr.isSuccess(), 'Expected error when creating plant in a permanently closed garden');
+        System.assert(sr.getErrors()[0].getMessage().contains('permanently closed'));
+    }
+
+    // -------------------------------------------------------------
+    // 2. Updating an existing plant *into* a permanently closed garden → ERROR
+    // -------------------------------------------------------------
+    @isTest
+    static void testUpdatePlantToClosedGardenThrowsError() {
+        List<CAMPX__Garden__c> gardens = new List<CAMPX__Garden__c>{
+            new CAMPX__Garden__c(CAMPX__Status__c = GardenConstants.getStatusLabel(GardenConstants.Status.Operational)),
+            new CAMPX__Garden__c(CAMPX__Status__c = GardenConstants.getStatusLabel(GardenConstants.Status.PermanentClosure))
+        };
+        insert gardens;
+        CAMPX__Garden__c opGarden = gardens[0];
+        CAMPX__Garden__c closedGarden = gardens[1];
+
+        Assert.areEqual(GardenConstants.getStatusLabel(GardenConstants.Status.Operational), opGarden.CAMPX__Status__c);
+        Assert.areEqual(GardenConstants.getStatusLabel(GardenConstants.Status.PermanentClosure), closedGarden.CAMPX__Status__c);
+        
+        CAMPX__Plant__c p = new CAMPX__Plant__c(CAMPX__Garden__c = opGarden.Id);
+        insert p;
+
+        p.CAMPX__Garden__c = closedGarden.Id;
+
+        Test.startTest();
+        Database.SaveResult sr = Database.update(p, false);
+        Test.stopTest();
+
+        System.assert(!sr.isSuccess(), 'Expected error when updating plant to a permanently closed garden');
+        System.assert(sr.getErrors()[0].getMessage().contains('permanently closed'));
+    }
+
+    // -------------------------------------------------------------
+    // 3. Updating an existing plant to a *temporarily* closed garden → NO ERROR
+    // -------------------------------------------------------------
+    @isTest
+    static void testUpdatePlantToTempClosedGardenAllowed() {
+        List<CAMPX__Garden__c> gardens = new List<CAMPX__Garden__c>{
+           new CAMPX__Garden__c(CAMPX__Status__c = GardenConstants.getStatusLabel(GardenConstants.Status.Operational)),
+           new CAMPX__Garden__c(CAMPX__Status__c = GardenConstants.getStatusLabel(GardenConstants.Status.TemporaryClosure)),
+           new CAMPX__Garden__c(CAMPX__Status__c = GardenConstants.getStatusLabel(GardenConstants.Status.PermanentClosure))
+        };
+        insert gardens;
+        CAMPX__Garden__c opGarden = gardens[0];
+        CAMPX__Garden__c tempGarden = gardens[1];
+        CAMPX__Garden__c closedGarden = gardens[2];
+
+        // Create plant initially in operational garden
+        CAMPX__Plant__c p = new CAMPX__Plant__c(CAMPX__Garden__c = opGarden.Id);
+        insert p;
+
+        // Move to temporary closure garden
+        p.CAMPX__Garden__c = tempGarden.Id;
+
+        Test.startTest();
+        Database.SaveResult sr = Database.update(p, false);
+        Test.stopTest();
+
+        System.assert(sr.isSuccess(), 'Updating to a temporarily closed garden should be allowed.');
+    }
+
+    // -------------------------------------------------------------
+    // 4. Creating a plant in a temporarily closed garden → NO ERROR
+    // -------------------------------------------------------------
+    @isTest
+    static void testCreatePlantInTempClosedGardenAllowed() {
+        List<CAMPX__Garden__c> gardens = new List<CAMPX__Garden__c>{
+            new CAMPX__Garden__c(CAMPX__Status__c = GardenConstants.getStatusLabel(GardenConstants.Status.Operational)),
+            new CAMPX__Garden__c(CAMPX__Status__c = GardenConstants.getStatusLabel(GardenConstants.Status.TemporaryClosure)),
+            new CAMPX__Garden__c(CAMPX__Status__c = GardenConstants.getStatusLabel(GardenConstants.Status.PermanentClosure))
+        };
+        insert gardens;
+        CAMPX__Garden__c opGarden = gardens[0];
+        CAMPX__Garden__c tempGarden = gardens[1];
+        CAMPX__Garden__c closedGarden = gardens[2];
+
+        CAMPX__Plant__c p = new CAMPX__Plant__c(CAMPX__Garden__c = tempGarden.Id);
+
+        Test.startTest();
+        Database.SaveResult sr = Database.insert(p, false);
+        Test.stopTest();
+
+        System.assert(sr.isSuccess(), 'Creating plant in temporarily closed garden should be allowed.');
+    }
+
+    // -------------------------------------------------------------
+    // 5. Creating a plant in an operational garden → NO ERROR
+    // -------------------------------------------------------------
+    @isTest
+    static void testCreatePlantOperationalGardenAllowed() {
+        List<CAMPX__Garden__c> gardens = new List<CAMPX__Garden__c>{
+            new CAMPX__Garden__c(CAMPX__Status__c = GardenConstants.getStatusLabel(GardenConstants.Status.Operational)),
+            new CAMPX__Garden__c(CAMPX__Status__c = GardenConstants.getStatusLabel(GardenConstants.Status.TemporaryClosure)),
+            new CAMPX__Garden__c(CAMPX__Status__c = GardenConstants.getStatusLabel(GardenConstants.Status.PermanentClosure))
+        };
+        insert gardens;
+        CAMPX__Garden__c opGarden = gardens[0];
+        CAMPX__Garden__c tempGarden = gardens[1];
+        CAMPX__Garden__c closedGarden = gardens[2];
+
+        CAMPX__Plant__c p = new CAMPX__Plant__c(CAMPX__Garden__c = opGarden.Id);
+
+        Test.startTest();
+        Database.SaveResult sr = Database.insert(p, false);
+        Test.stopTest();
+
+        System.assert(sr.isSuccess(), 'Creating plant in operational garden should be allowed.');
+    }
+
+
 }

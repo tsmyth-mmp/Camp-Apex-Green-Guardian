@@ -6,7 +6,7 @@ trigger PlantTrigger on CAMPX__Plant__c (before insert, before update, before de
             handler.beforeInsert(Trigger.new);
         }
         when BEFORE_UPDATE {
-            // handler.beforeUpdate(Trigger.old, Trigger.new, Trigger.oldMap, Trigger.newMap);
+            handler.beforeUpdate(Trigger.old, Trigger.new, Trigger.oldMap, Trigger.newMap);
         }
         when BEFORE_DELETE {
             // handler.beforeDelete(Trigger.old, Trigger.oldMap);

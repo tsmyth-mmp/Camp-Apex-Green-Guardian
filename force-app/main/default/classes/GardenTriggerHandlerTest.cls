@@ -334,6 +334,7 @@ private class GardenTriggerHandlerTest {
                                          WHERE Id = :garden.Id 
                                          LIMIT 1];  
         Assert.areEqual(0, beforeUpdate.CAMPX__Capacity__c);
+        garden.CAMPX__Minimum_Plant_Count__c = 0;
         garden.CAMPX__Max_Plant_Count__c = 0;
         Test.startTest();
         update garden;
@@ -427,7 +428,7 @@ private class GardenTriggerHandlerTest {
 
     @isTest
     static void setStatus_CreateGardenWithZeroCapacity() {
-        CAMPX__Garden__c garden = new CAMPX__Garden__c(CAMPX__Max_Plant_Count__c = 0);
+        CAMPX__Garden__c garden = new CAMPX__Garden__c(CAMPX__Max_Plant_Count__c = 2);
         Test.startTest();
         insert(garden);
         Test.stopTest();
@@ -447,7 +448,7 @@ private class GardenTriggerHandlerTest {
                                          WHERE Id = :garden.Id 
                                          LIMIT 1];  
         Assert.areEqual(90, beforeUpdate.CAMPX__Capacity__c);
-        garden.CAMPX__Max_Plant_Count__c = 0;
+        garden.CAMPX__Total_Plant_Count__c = 0;
         Test.startTest();
         update garden;
         Test.stopTest();
@@ -461,13 +462,12 @@ private class GardenTriggerHandlerTest {
 
     @isTest
     static void setStatus_IncreaseCapacity() {
-        CAMPX__Garden__c garden = new CAMPX__Garden__c(CAMPX__Max_Plant_Count__c = 0);
+        CAMPX__Garden__c garden = new CAMPX__Garden__c(CAMPX__Max_Plant_Count__c = 2);
         insert(garden);
         CAMPX__Garden__c beforeUpdate = [SELECT Id, CAMPX__Capacity__c, CAMPX__Status__c
                                          FROM CAMPX__Garden__c 
                                          WHERE Id = :garden.Id 
                                          LIMIT 1];  
-        Assert.areEqual(0, beforeUpdate.CAMPX__Capacity__c);
         garden.CAMPX__Total_Plant_Count__c = 9;
         garden.CAMPX__Max_Plant_Count__c = 10;
         Test.startTest();
@@ -532,7 +532,9 @@ private class GardenTriggerHandlerTest {
                                          FROM CAMPX__Garden__c 
                                          WHERE Id = :garden.Id 
                                          LIMIT 1];  
-        garden.CAMPX__Minimum_Plant_Count__c = 100;
+        garden.CAMPX__Minimum_Plant_Count__c = 12;
+        garden.CAMPX__Max_Plant_Count__c = 100;
+        
         Test.startTest();
         update garden;
         Test.stopTest();
@@ -572,7 +574,7 @@ private class GardenTriggerHandlerTest {
             CAMPX__Total_Plant_Count__c = -1,
             CAMPX__Total_Unhealthy_Plant_Count__c = -2,
             CAMPX__Minimum_Plant_Count__c = -3,
-            CAMPX__Max_Plant_Count__c = -4
+            CAMPX__Max_Plant_Count__c = -1
         );
 
         Test.startTest();
