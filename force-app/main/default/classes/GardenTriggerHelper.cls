@@ -37,6 +37,8 @@ public with sharing class GardenTriggerHelper {
         deleteOpenTasksWithoutReplacementManager(oldRecords, newRecords, oldMap, newMap);
     }
 
+    /*************************************HELPER METHODS*************************************/
+
      /**
      * Initializes default field values on a garden record if null or blank.
      *

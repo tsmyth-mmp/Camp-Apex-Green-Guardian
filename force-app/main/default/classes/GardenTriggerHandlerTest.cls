@@ -566,4 +566,38 @@ private class GardenTriggerHandlerTest {
         Assert.areNotEqual(beforeUpdate.CAMPX__Status__c, afterUpdate.CAMPX__Status__c);
     }
 
+     @IsTest
+    static void testNegativeValues_AddErrors() {
+        CAMPX__Garden__c g = new CAMPX__Garden__c(
+            CAMPX__Total_Plant_Count__c = -1,
+            CAMPX__Total_Unhealthy_Plant_Count__c = -2,
+            CAMPX__Minimum_Plant_Count__c = -3,
+            CAMPX__Max_Plant_Count__c = -4
+        );
+
+        Test.startTest();
+        Database.SaveResult sr = Database.insert(g, false);
+        Test.stopTest();
+
+        Assert.isFalse(sr.isSuccess(), 'Record should NOT insert because of negative values');
+        Assert.isTrue(sr.getErrors().size() == 1,'Only one error is expected because addError halts further DML on this record');
+        Assert.isTrue(sr.getErrors()[0].getMessage().contains('Plant Count fields must be greater than or equal to zero'), 'Error message mismatch');
+    }
+
+    @IsTest
+    static void testPositiveValues_NoErrors() {
+        CAMPX__Garden__c g = new CAMPX__Garden__c(
+            CAMPX__Total_Plant_Count__c = 5,
+            CAMPX__Total_Unhealthy_Plant_Count__c = 1,
+            CAMPX__Minimum_Plant_Count__c = 0,
+            CAMPX__Max_Plant_Count__c = 10
+        );
+
+        Test.startTest();
+        insert g;
+        Test.stopTest();
+
+        Assert.areNotEqual(null, g.Id, 'Record should insert successfully');
+    }
+
 }
