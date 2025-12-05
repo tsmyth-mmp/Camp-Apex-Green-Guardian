@@ -1,8 +1,8 @@
 public with sharing class GardenTriggerHelper {
     public void processBeforeInsert(List<CAMPX__Garden__c> newRecords) {
-            initializeFields(newRecords);
-            refreshGardenCalculatedFields(newRecords, null);
-            setStatusByCondition(newRecords, null);
+        initializeFields(newRecords);
+        refreshGardenCalculatedFields(newRecords, null);
+        setStatusByCondition(newRecords, null);
     }
 
     public void processBeforeUpdate(
@@ -12,7 +12,6 @@ public with sharing class GardenTriggerHelper {
         Map<Id, CAMPX__Garden__c> newMap
     ) {
         handleManagerChange(newRecords, oldMap);
-        setGardenCalculatedFields(newRecords);
         refreshGardenCalculatedFields(newRecords, oldMap);
         setStatusByCondition(newRecords, oldMap);
     }
@@ -264,13 +263,6 @@ public with sharing class GardenTriggerHelper {
         return ((Decimal)garden.CAMPX__Total_Plant_Count__c / (Decimal)garden.CAMPX__Max_Plant_Count__c) * 100;                
     }
 
-    private void setGardenCalculatedFields(List<CAMPX__Garden__c> gardens) {
-        for (CAMPX__Garden__c garden : gardens) {
-            garden.CAMPX__Capacity__c = computeGardenCapacity(garden);
-            garden.CAMPX__Health_Index__c = computeGardenHealthIndex(garden);
-        }
-    }
-
     /**
      * Refreshes the calculated fields (Capacity and Health Index) for a list of gardens.
      *
@@ -346,8 +338,7 @@ public with sharing class GardenTriggerHelper {
                 || garden.CAMPX__Minimum_Plant_Count__c > garden.CAMPX__Total_Plant_Count__c
             ) {
                 garden.CAMPX__Status__c = GardenConstants.getStatusLabel(GardenConstants.Status.AwaitingResources);
-            }
-            
+            }        
         } 
     }
 }
