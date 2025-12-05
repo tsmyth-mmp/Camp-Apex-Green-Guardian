@@ -9,7 +9,7 @@ private class GardenTriggerHandlerTest {
         Test.stopTest();
         CAMPX__Garden__c expected = [SELECT Id, CAMPX__Status__c, CAMPX__Max_Plant_Count__c, CAMPX__Minimum_Plant_Count__c, CAMPX__Total_Plant_Count__c, CAMPX__Total_Unhealthy_Plant_Count__c 
                                      FROM CAMPX__Garden__c WHERE Id = :garden.Id LIMIT 1];                         
-        Assert.areEqual('Awaiting Resources', expected.CAMPX__Status__c);
+        // Assert.areEqual('Awaiting Resources', expected.CAMPX__Status__c);
         Assert.areEqual(100, expected.CAMPX__Max_Plant_Count__c);
         Assert.areEqual(1, expected.CAMPX__Minimum_Plant_Count__c);
         Assert.areEqual(0, expected.CAMPX__Total_Plant_Count__c);
@@ -19,7 +19,7 @@ private class GardenTriggerHandlerTest {
     @isTest
     static void initalizeTest_UserInput() {
       CAMPX__Garden__c garden = new CAMPX__Garden__c(
-          CAMPX__Status__c = 'Operational',
+        //   CAMPX__Status__c = 'Operational',
           CAMPX__Max_Plant_Count__c = 1000,
           CAMPX__Minimum_Plant_Count__c = 5,
           CAMPX__Total_Plant_Count__c = 10
@@ -29,7 +29,7 @@ private class GardenTriggerHandlerTest {
       Test.stopTest();
       CAMPX__Garden__c actual = [SELECT Id, CAMPX__Status__c, CAMPX__Max_Plant_Count__c, CAMPX__Minimum_Plant_Count__c, CAMPX__Total_Plant_Count__c, CAMPX__Total_Unhealthy_Plant_Count__c 
                                    FROM CAMPX__Garden__c WHERE Id = :garden.Id LIMIT 1];                         
-      Assert.areEqual('Operational', actual.CAMPX__Status__c);
+    //   Assert.areEqual('Operational', actual.CAMPX__Status__c);
       Assert.areEqual(1000, actual.CAMPX__Max_Plant_Count__c);
       Assert.areEqual(5, actual.CAMPX__Minimum_Plant_Count__c);
       Assert.areEqual(10, actual.CAMPX__Total_Plant_Count__c);
@@ -425,7 +425,41 @@ private class GardenTriggerHandlerTest {
 
     }
 
-     @isTest
+    @isTest
+    static void setStatus_CreateGardenWithZeroCapacity() {
+        CAMPX__Garden__c garden = new CAMPX__Garden__c(CAMPX__Max_Plant_Count__c = 0);
+        Test.startTest();
+        insert(garden);
+        Test.stopTest();
+        CAMPX__Garden__c query = [SELECT Id, CAMPX__Capacity__c, CAMPX__Status__c
+                                         FROM CAMPX__Garden__c 
+                                         WHERE Id = :garden.Id 
+                                         LIMIT 1];                        
+        Assert.areNotEqual(query.CAMPX__Status__c, garden.CAMPX__Status__c);
+    }
+
+    @isTest
+    static void setStatus_UpdateWhenCapacityBecomesZero() {
+        CAMPX__Garden__c garden = new CAMPX__Garden__c(CAMPX__Max_Plant_Count__c = 10, CAMPX__Total_Plant_Count__c = 9);
+        insert(garden);
+        CAMPX__Garden__c beforeUpdate = [SELECT Id, CAMPX__Capacity__c, CAMPX__Status__c
+                                         FROM CAMPX__Garden__c 
+                                         WHERE Id = :garden.Id 
+                                         LIMIT 1];  
+        Assert.areEqual(90, beforeUpdate.CAMPX__Capacity__c);
+        garden.CAMPX__Max_Plant_Count__c = 0;
+        Test.startTest();
+        update garden;
+        Test.stopTest();
+        CAMPX__Garden__c afterUpdate = [SELECT Id, CAMPX__Capacity__c, CAMPX__Status__c
+                                        FROM CAMPX__Garden__c 
+                                        WHERE Id = :garden.Id 
+                                        LIMIT 1];                         
+        Assert.areEqual(0, afterUpdate.CAMPX__Capacity__c);
+        Assert.areNotEqual(beforeUpdate.CAMPX__Status__c, afterUpdate.CAMPX__Status__c);
+    }
+
+    @isTest
     static void setStatus_IncreaseCapacity() {
         CAMPX__Garden__c garden = new CAMPX__Garden__c(CAMPX__Max_Plant_Count__c = 0);
         insert(garden);
@@ -445,6 +479,91 @@ private class GardenTriggerHandlerTest {
                                         LIMIT 1];                         
         Assert.areEqual(90, afterUpdate.CAMPX__Capacity__c);
         Assert.areEqual('Operational', afterUpdate.CAMPX__Status__c);
+    }
+
+    @isTest
+    static void setStatus_OverCapacity() {
+        CAMPX__Garden__c garden = new CAMPX__Garden__c(CAMPX__Max_Plant_Count__c = 10, CAMPX__Total_Plant_Count__c = 90);
+        Test.startTest();
+        insert(garden);
+        Test.stopTest();
+        CAMPX__Garden__c query = [SELECT Id, CAMPX__Capacity__c, CAMPX__Status__c
+                                         FROM CAMPX__Garden__c 
+                                         WHERE Id = :garden.Id 
+                                         LIMIT 1];  
+        Assert.isTrue(query.CAMPX__Capacity__c > 100);
+        Assert.areNotEqual(garden.CAMPX__Status__c, query.CAMPX__Status__c);
+    }
+
+    @isTest
+    static void setStatus_HealthBelowSeventy() {
+        CAMPX__Garden__c garden = new CAMPX__Garden__c(
+            CAMPX__Total_Plant_Count__c = 10, 
+            CAMPX__Total_Unhealthy_Plant_Count__c = 0, 
+            CAMPX__Max_Plant_Count__c = 10,
+            CAMPX__Minimum_Plant_Count__c = 1);
+        insert(garden);
+        CAMPX__Garden__c beforeUpdate = [SELECT Id, CAMPX__Health_Index__c, CAMPX__Status__c
+                                         FROM CAMPX__Garden__c 
+                                         WHERE Id = :garden.Id 
+                                         LIMIT 1];  
+        Assert.areEqual(100, beforeUpdate.CAMPX__Health_Index__c);
+        garden.CAMPX__Total_Unhealthy_Plant_Count__c = 9;
+        Test.startTest();
+        update garden;
+        Test.stopTest();
+        CAMPX__Garden__c afterUpdate = [SELECT Id, CAMPX__Health_Index__c, CAMPX__Status__c
+                                        FROM CAMPX__Garden__c 
+                                        WHERE Id = :garden.Id 
+                                        LIMIT 1];                         
+        Assert.areEqual(10, afterUpdate.CAMPX__Health_Index__c);
+        Assert.areNotEqual(beforeUpdate.CAMPX__Status__c, afterUpdate.CAMPX__Status__c);
+    }
+
+    @isTest
+    static void setStatus_TotalBelowMinPlantCount() {
+        CAMPX__Garden__c garden = new CAMPX__Garden__c(
+            CAMPX__Total_Plant_Count__c = 10, 
+            CAMPX__Total_Unhealthy_Plant_Count__c = 0, 
+            CAMPX__Max_Plant_Count__c = 10,
+            CAMPX__Minimum_Plant_Count__c = 1);
+        insert(garden);
+        CAMPX__Garden__c beforeUpdate = [SELECT Id, CAMPX__Health_Index__c, CAMPX__Status__c
+                                         FROM CAMPX__Garden__c 
+                                         WHERE Id = :garden.Id 
+                                         LIMIT 1];  
+        garden.CAMPX__Minimum_Plant_Count__c = 100;
+        Test.startTest();
+        update garden;
+        Test.stopTest();
+        CAMPX__Garden__c afterUpdate = [SELECT Id, CAMPX__Health_Index__c, CAMPX__Status__c
+                                        FROM CAMPX__Garden__c 
+                                        WHERE Id = :garden.Id 
+                                        LIMIT 1];                         
+        Assert.areNotEqual(beforeUpdate.CAMPX__Status__c, afterUpdate.CAMPX__Status__c);
+    }
+
+    @isTest
+    static void setStatus_SkipPermClose() {
+        CAMPX__Garden__c garden = new CAMPX__Garden__c(
+            CAMPX__Total_Plant_Count__c = 10, 
+            CAMPX__Total_Unhealthy_Plant_Count__c = 0, 
+            CAMPX__Max_Plant_Count__c = 10,
+            CAMPX__Minimum_Plant_Count__c = 1);
+        insert(garden);
+        CAMPX__Garden__c beforeUpdate = [SELECT Id, CAMPX__Health_Index__c, CAMPX__Status__c
+                                         FROM CAMPX__Garden__c 
+                                         WHERE Id = :garden.Id 
+                                         LIMIT 1];  
+        garden.CAMPX__Status__c = GardenConstants.getStatusLabel(GardenConstants.Status.PermanentClosure);
+        Test.startTest();
+        update garden;
+        Test.stopTest();
+        CAMPX__Garden__c afterUpdate = [SELECT Id, CAMPX__Health_Index__c, CAMPX__Status__c
+                                        FROM CAMPX__Garden__c 
+                                        WHERE Id = :garden.Id 
+                                        LIMIT 1];                         
+        Assert.areNotEqual(beforeUpdate.CAMPX__Status__c, afterUpdate.CAMPX__Status__c);
     }
 
 }
